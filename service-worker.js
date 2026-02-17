@@ -2,7 +2,7 @@
 const STATIC_CACHE = "ruta-static";
 const RUNTIME_CACHE = "ruta-runtime";
 
-// Archivos que sí vale la pena cachear "fijos"
+// Archivos "shell" (no incluyo index.html para que siempre se actualice)
 const STATIC_ASSETS = [
   "./",
   "./manifest.json",
@@ -10,7 +10,6 @@ const STATIC_ASSETS = [
   "./icons/icon-512.png"
 ];
 
-// 1) Instala: cachea lo básico (NO index.html)
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -18,22 +17,31 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// 2) Activa: toma control inmediato
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    // ✅ Limpia caches viejos que puedan quedar
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.map((k) => {
+        if (k !== STATIC_CACHE && k !== RUNTIME_CACHE) return caches.delete(k);
+        return null;
+      })
+    );
+
+    await self.clients.claim();
+  })());
 });
 
-// Helpers
 async function networkFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   try {
     const fresh = await fetch(request, { cache: "no-store" });
-    // guarda copia para offline
     cache.put(request, fresh.clone());
     return fresh;
   } catch (err) {
     const cached = await cache.match(request);
-    return cached || Response.error();
+    // ✅ fallback offline: abre la app shell
+    return cached || caches.match("./") || Response.error();
   }
 }
 
@@ -50,7 +58,6 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Solo maneja GET
   if (req.method !== "GET") return;
 
   // No cachear APIs / tiles / CDNs
@@ -60,14 +67,15 @@ self.addEventListener("fetch", (event) => {
     url.origin.includes("nominatim.openstreetmap.org") ||
     url.origin.includes("unpkg.com")
   ) {
-    return; // deja que vaya directo a la red
+    return;
   }
 
-  // ✅ CLAVE: index.html SIEMPRE network-first (se actualiza solo)
+  // HTML / navegación: network-first (auto update)
+  const accept = req.headers.get("accept") || "";
   const isHTML =
     req.mode === "navigate" ||
-    (url.pathname.endsWith("/index.html")) ||
-    (req.headers.get("accept") || "").includes("text/html");
+    url.pathname.endsWith("/index.html") ||
+    accept.includes("text/html");
 
   if (isHTML) {
     event.respondWith(networkFirst(req));
@@ -80,6 +88,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Por defecto: cache-first para archivos propios
+  // Otros archivos propios: cache-first
   event.respondWith(cacheFirst(req));
 });

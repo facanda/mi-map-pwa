@@ -1,860 +1,222 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ruta Pro Multi (Camión)</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ruta Pro Multi</title>
 
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0b1220">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <style>
-    :root{
-      --bg:#0b1220;
-      --card:rgba(17,24,39,.92);
-      --text:#e5e7eb;
-      --muted:rgba(229,231,235,.75);
-      --line:rgba(255,255,255,.12);
-      --shadow:0 18px 40px rgba(0,0,0,.35);
-      --radius:18px;
-    }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background:var(--bg);
-      color:var(--text);
-      height:100vh;
-      overflow:hidden;
-    }
-    #map{ position:absolute; inset:0; }
-
-    .top{
-      position:absolute;
-      top:12px; left:12px; right:12px;
-      z-index:9999;
-      display:grid;
-      gap:10px;
-      pointer-events:none;
-    }
-    .card{
-      pointer-events:auto;
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      backdrop-filter: blur(10px);
-    }
-    .bar{
-      padding:10px 12px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
-    }
-    .logo{
-      width:34px;height:34px;
-      border-radius:12px;
-      background:linear-gradient(135deg, rgba(34,197,94,.35), rgba(59,130,246,.25));
-      display:flex;align-items:center;justify-content:center;
-      border:1px solid rgba(255,255,255,.10);
-    }
-    .brand h1{
-      margin:0;
-      font-size:14px;
-      line-height:1.1;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .brand p{
-      margin:0;
-      font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .btnRow{ display:flex; gap:8px; align-items:center; }
-    .iconBtn{
-      width:38px;height:38px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      display:flex;align-items:center;justify-content:center;
-      cursor:pointer;
-    }
-    .iconBtn:active{ transform:translateY(1px); }
-
-    .search{
-      padding:10px 12px 12px;
-      display:grid;
-      gap:10px;
-    }
-
-    #stops{ display:grid; gap:10px; }
-
-    .row{
-      display:grid;
-      grid-template-columns:18px 1fr 38px 44px;
-      gap:10px;
-      align-items:center;
-    }
-    .dot{
-      width:10px;height:10px;border-radius:999px;
-      justify-self:center;
-      background:#93c5fd;
-    }
-    .field{ position:relative; }
-    input{
-      width:100%;
-      height:44px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      outline:none;
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      padding:0 12px;
-      font-size:14px;
-    }
-    input::placeholder{ color:rgba(229,231,235,.55); }
-    .smallBtn{
-      height:44px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      width:100%;
-    }
-
-    .suggest{
-      position:absolute;
-      top:48px; left:0; right:0;
-      background:rgba(17,24,39,.98);
-      border:1px solid var(--line);
-      border-radius:14px;
-      overflow:hidden;
-      box-shadow:var(--shadow);
-      display:none;
-      z-index:99999;
-    }
-    .suggest.open{ display:block; }
-    .item{
-      padding:10px 12px;
-      border-top:1px solid rgba(255,255,255,.08);
-      cursor:pointer;
-      line-height:1.2;
-    }
-    .item:first-child{ border-top:0; }
-    .item:hover{ background:rgba(255,255,255,.06); }
-    .item .t{ font-size:13px; color:var(--text); }
-    .item .s{ font-size:12px; color:var(--muted); margin-top:4px; }
-
-    .chips{ display:flex; gap:8px; flex-wrap:wrap; }
-    .chip{
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.06);
-      font-size:12px;
-      color:var(--text);
-      cursor:pointer;
-      user-select:none;
-    }
-    .chip.active{
-      border-color: rgba(34,197,94,.55);
-      box-shadow: 0 0 0 2px rgba(34,197,94,.18) inset;
-    }
-    .chip.danger{ border-color: rgba(239,68,68,.35); }
-
-    .sheet{
-      position:absolute;
-      left:12px; right:12px; bottom:12px;
-      z-index:9999;
-      pointer-events:none;
-      display:grid;
-      gap:10px;
-    }
-    .sheet .card{ pointer-events:auto; padding:12px; }
-    .resultTop{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:12px;
-    }
-    .metrics{ display:grid; gap:6px; }
-    .big{ font-size:20px; font-weight:800; letter-spacing:.2px; }
-    .sub{ color:var(--muted); font-size:12px; }
-    .status{ margin-top:10px; font-size:12px; color:rgba(229,231,235,.7); }
-
-    .leaflet-control-zoom a{
-      background:rgba(17,24,39,.92) !important;
-      color:#e5e7eb !important;
-      border:1px solid rgba(255,255,255,.12) !important;
-    }
-
-    @media (max-width:420px){
-      .brand p{ display:none; }
-      .row{ grid-template-columns:14px 1fr 38px 44px; }
-    }
-  </style>
+<style>
+body{margin:0;font-family:Arial;background:#0b1220;color:#fff}
+#map{position:absolute;inset:0}
+.panel{
+position:absolute;bottom:12px;left:12px;right:12px;
+background:rgba(17,24,39,.95);
+padding:14px;border-radius:16px;
+box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+.big{font-size:20px;font-weight:bold}
+.small{font-size:13px;color:#ccc}
+button{
+padding:8px 12px;border-radius:10px;border:none;
+background:#2563eb;color:white;cursor:pointer;margin-right:6px
+}
+button.secondary{background:#374151}
+</style>
 </head>
 <body>
 
 <div id="map"></div>
 
-<div class="top">
-  <div class="card">
-    <div class="bar">
-      <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M12 22s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11Z" stroke="white" stroke-width="2"/>
-            <circle cx="12" cy="11" r="2.5" stroke="white" stroke-width="2"/>
-          </svg>
-        </div>
-        <div style="min-width:0">
-          <h1>Ruta Pro Multi</h1>
-          <p>Multi-paradas + Solo punto + Camión</p>
-        </div>
-      </div>
-
-      <div class="btnRow">
-        <button class="iconBtn" id="btnLocate" title="Mi ubicación">📍</button>
-        <button class="iconBtn" id="btnReset" title="Reset">⟲</button>
-      </div>
-    </div>
-
-    <div class="search">
-      <div class="chips">
-        <button class="chip active" id="modeRoute">🧭 Ruta con paradas</button>
-        <button class="chip" id="modeSolo">📌 Solo punto</button>
-      </div>
-
-      <div class="chips">
-        <button class="chip" id="truckMode">🚛 Modo camión: OFF</button>
-        <button class="chip" id="truckBreaks">🛑 Descansos: OFF</button>
-      </div>
-
-      <div id="stops"></div>
-
-      <div class="chips" style="justify-content:space-between;">
-        <button class="chip" id="btnAddStop">➕ Agregar parada</button>
-        <button class="chip" id="btnRoute">Calcular ruta</button>
-      </div>
-    </div>
-  </div>
+<div class="panel">
+<div class="big" id="metricDistance">—</div>
+<div class="small" id="metricDuration">Tiempo: —</div>
+<div class="small" id="singleCity">Ciudad: —</div>
+<div style="margin-top:10px">
+<button id="modeSolo">📌 Solo punto</button>
+<button id="modeRoute" class="secondary">🧭 Ruta</button>
+<button id="resetBtn" class="secondary">⟲ Reset</button>
 </div>
-
-<div class="sheet">
-  <div class="card">
-    <div class="resultTop">
-      <div class="metrics">
-        <div class="big" id="metricDistance">—</div>
-        <div class="sub" id="metricDuration">Tiempo: —</div>
-        <div class="sub" id="singleCity">Ciudad: —</div>
-      </div>
-      <div class="sub" style="text-align:right" id="metricFromTo">—</div>
-    </div>
-
-    <div class="chips" style="margin-top:10px;">
-      <div class="chip" id="chipFit">🔎 Ver</div>
-      <div class="chip" id="chipClearRoute">🧹 Quitar</div>
-      <div class="chip danger" id="chipClearAll">🗑 Reset total</div>
-    </div>
-
-    <div class="status" id="status"></div>
-  </div>
 </div>
 
 <script>
-  // -----------------------------
-  // Map init
-  // -----------------------------
-  const map = L.map('map').setView([39.8283, -98.5795], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
-
-  const $ = (id) => document.getElementById(id);
-
-  // -----------------------------
-  // UI helpers
-  // -----------------------------
-  function setStatus(msg){ $("status").textContent = msg || ""; }
-  function setSingleCity(text){ $("singleCity").textContent = `Ciudad: ${text || "—"}`; }
-  function setMetrics(distanceText, durationText, fromToText){
-    $("metricDistance").textContent = distanceText ?? "—";
-    $("metricDuration").textContent = durationText ?? "Tiempo: —";
-    $("metricFromTo").textContent = fromToText ?? "—";
-  }
-
-  // -----------------------------
-  // Math helpers
-  // -----------------------------
-  function milesFromMeters(m){ return m / 1609.344; }
-  function formatTimeSeconds(sec){
-    const totalMin = Math.round(sec / 60);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return h ? `${h} h ${m} min` : `${m} min`;
-  }
-  function milesBetween(a,b){ return milesFromMeters(map.distance(a,b)); }
-
-  // Bearing for "NE, SW..."
-  function bearingDegrees(from, to){
-    const lat1 = from.lat * Math.PI/180;
-    const lat2 = to.lat * Math.PI/180;
-    const dLon = (to.lng - from.lng) * Math.PI/180;
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
-    let brng = Math.atan2(y, x) * 180/Math.PI;
-    brng = (brng + 360) % 360;
-    return brng;
-  }
-  function degToCompass8(deg){
-    const dirs = ["N","NE","E","SE","S","SW","W","NW"];
-    const i = Math.round(deg / 45) % 8;
-    return dirs[i];
-  }
-
-  // -----------------------------
-  // Truck mode
-  // -----------------------------
-  let isTruckMode = false;
-  let useBreaks = false;
-
-  const TRUCK_AVG_MPH = 55;
-  const BREAK_EVERY_MILES = 150;
-  const BREAK_MINUTES = 15;
-
-  function truckTimeFromMiles(miles) {
-    let hours = miles / TRUCK_AVG_MPH;
-    if (useBreaks) {
-      const breaks = Math.floor(miles / BREAK_EVERY_MILES);
-      hours += (breaks * BREAK_MINUTES) / 60;
-    }
-    return hours;
-  }
-  function formatHoursToHM(hours) {
-    const totalMin = Math.round(hours * 60);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return h ? `${h} h ${m} min` : `${m} min`;
-  }
-
-  // -----------------------------
-  // Nominatim
-  // -----------------------------
-  async function nominatimSearch(q){
-    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&addressdetails=1&limit=6`;
-    const res = await fetch(url, { headers: { "Accept":"application/json" }});
-    if(!res.ok) throw new Error("Nominatim search failed");
-    return await res.json();
-  }
-
-  async function nominatimReverse(lat, lon){
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
-    const res = await fetch(url, { headers: { "Accept":"application/json" }});
-    if(!res.ok) throw new Error("Nominatim reverse failed");
-    const data = await res.json();
-    const a = data.address || {};
-
-    // ❌ NO COUNTY
-    const city = a.city || a.town || a.village || a.municipality || "";
-    const locality = a.locality || a.city_district || a.suburb || a.neighbourhood || a.hamlet || "";
-
-    const finalCity = city || locality || "Ciudad no encontrada";
-
-    return {
-      city: finalCity,
-      state: a.state || "",
-      country: a.country || "",
-      display: data.display_name || finalCity
-    };
-  }
-
-  // Centro del lugar para "1.24 mi NE City, State"
-  const placeCenterCache = new Map();
-  async function getPlaceCenter(city, state, country){
-    const key = `${city}|${state}|${country}`.toLowerCase();
-    if (placeCenterCache.has(key)) return placeCenterCache.get(key);
-
-    const q = [city, state, country].filter(Boolean).join(", ");
-    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1`;
-
-    const res = await fetch(url, { headers: { "Accept":"application/json" }});
-    if(!res.ok) return null;
-
-    const arr = await res.json();
-    if(!arr?.length) return null;
-
-    const center = L.latLng(Number(arr[0].lat), Number(arr[0].lon));
-    placeCenterCache.set(key, center);
-    return center;
-  }
-
-  async function prettyRelativeCity(pointLatLng){
-    const r = await nominatimReverse(pointLatLng.lat, pointLatLng.lng);
-    const cityName = r.city;
-    const cityWithState = r.state ? `${cityName}, ${r.state}` : cityName;
-
-    const center = await getPlaceCenter(cityName, r.state, r.country);
-    if(!center){
-      return { text: cityWithState, raw: r };
-    }
-
-    const mi = milesBetween(center, pointLatLng);
-    const brng = bearingDegrees(center, pointLatLng);
-    const dir = degToCompass8(brng);
-
-    if (mi < 0.15) return { text: cityWithState, raw: r };
-
-    return { text: `${mi.toFixed(2)} mi ${dir} ${cityWithState}`, raw: r };
-  }
-
-  // -----------------------------
-  // OSRM multi route
-  // -----------------------------
-  let routeLayer = null;
-
-  async function getRouteOSRM_Multi(latlngs){
-    const coords = latlngs.map(p => `${p.lng},${p.lat}`).join(";");
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&alternatives=false&steps=false`;
-    const res = await fetch(url, { headers: { "Accept":"application/json" }});
-    if(!res.ok) throw new Error("OSRM request failed");
-    const data = await res.json();
-    if(!data.routes?.length) throw new Error("No route found");
-    return data.routes[0];
-  }
-
-  function clearRouteOnly(){
-    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-    setMetrics("—","Tiempo: —", soloMode ? "Solo punto" : "Ruta con paradas");
-  }
-
-  async function computeMultiRoute(){
-    if (soloMode){
-      setStatus("Estás en Solo punto. Cambia a Ruta para usar paradas.");
-      return;
-    }
-    const pts = stops.filter(s => s.latlng).map(s => s.latlng);
-    if (pts.length < 2){
-      setStatus("Pon al menos 2 puntos (A y B).");
-      return;
-    }
-
-    setStatus("Calculando ruta con paradas…");
-    clearRouteOnly();
-
-    try{
-      const route = await getRouteOSRM_Multi(pts);
-      const miles = milesFromMeters(route.distance);
-
-      let timeLine = `Tiempo: ${formatTimeSeconds(route.duration)} (auto)`;
-      if (isTruckMode) {
-        const truckTxt = formatHoursToHM(truckTimeFromMiles(miles));
-        timeLine = `Tiempo: ${truckTxt} (camión${useBreaks ? " + descansos" : ""})`;
-      }
-
-      routeLayer = L.geoJSON(route.geometry, { style: { weight: 6 } }).addTo(map);
-      map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
-
-      setMetrics(`${miles.toFixed(2)} mi`, timeLine, `${pts.length} puntos`);
-      setSingleCity("—");
-      setStatus("");
-    } catch(e){
-      setStatus("No se pudo calcular ruta (OSRM demo). Intenta con menos paradas o espera un momento.");
-    }
-  }
-
-  function fitView(){
-    if (soloMode && soloMarker){
-      map.setView(soloMarker.getLatLng(), Math.max(map.getZoom(), 14));
-      return;
-    }
-    if (routeLayer){
-      map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
-      return;
-    }
-    const pts = stops.filter(s => s.latlng).map(s => s.latlng);
-    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [60,60] });
-  }
-
-  // -----------------------------
-  // Autocomplete helpers
-  // -----------------------------
-  function escapeHtml(str){
-    return (str||"")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-  function debounce(fn, ms){
-    let t;
-    return (...args) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn(...args), ms);
-    };
-  }
-  function closeSuggestEl(el){ el.classList.remove("open"); }
-  function openSuggestEl(el){ el.classList.add("open"); }
-
-  // -----------------------------
-  // Multi-stops state
-  // -----------------------------
-  const stops = []; // { id, label, latlng, marker, inputEl, suggestEl }
-  let activePickStopId = null;
-
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const stopsEl = $("stops");
-
-  function makeId(){ return Math.random().toString(16).slice(2); }
-  function stopLabel(index){
-    if (index < letters.length) return letters[index];
-    const base = letters[index % letters.length];
-    const n = Math.floor(index / letters.length);
-    return `${base}${n}`;
-  }
-
-  function renderStops(){
-    stopsEl.innerHTML = "";
-
-    stops.forEach((s, idx) => {
-      const row = document.createElement("div");
-      row.className = "row";
-
-      const dot = document.createElement("div");
-      dot.className = "dot";
-      dot.style.background = idx === 0 ? "#34d399" : "#60a5fa";
-
-      const field = document.createElement("div");
-      field.className = "field";
-
-      const input = document.createElement("input");
-      input.placeholder = `Punto ${s.label} (dirección o ciudad)`;
-      input.autocomplete = "off";
-
-      const suggest = document.createElement("div");
-      suggest.className = "suggest";
-
-      field.appendChild(input);
-      field.appendChild(suggest);
-
-      const pickBtn = document.createElement("button");
-      pickBtn.className = "smallBtn";
-      pickBtn.textContent = s.label;
-      pickBtn.title = `Elegir ${s.label} en el mapa`;
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "smallBtn";
-      delBtn.textContent = "✕";
-      delBtn.title = "Quitar parada";
-
-      row.appendChild(dot);
-      row.appendChild(field);
-      row.appendChild(pickBtn);
-      row.appendChild(delBtn);
-
-      stopsEl.appendChild(row);
-
-      s.inputEl = input;
-      s.suggestEl = suggest;
-
-      const onType = debounce(async () => {
-        const q = input.value.trim();
-        if (q.length < 3) { closeSuggestEl(suggest); return; }
-        try{
-          const results = await nominatimSearch(q);
-          renderSuggestForStop(s, results);
-        } catch(e){
-          setStatus("Error buscando lugar.");
-        }
-      }, 250);
-
-      input.addEventListener("input", onType);
-
-      pickBtn.addEventListener("click", () => {
-        if (soloMode){ setStatus("Estás en Solo punto. Cambia a Ruta para usar paradas."); return; }
-        activePickStopId = s.id;
-        setStatus(`Selecciona punto ${s.label} en el mapa (click).`);
-      });
-
-      delBtn.addEventListener("click", () => removeStop(s.id));
-    });
-  }
-
-  function renderSuggestForStop(stop, results){
-    const box = stop.suggestEl;
-    if (!results?.length){
-      box.innerHTML = `<div class="item"><div class="t">Sin resultados</div></div>`;
-      openSuggestEl(box);
-      return;
-    }
-
-    box.innerHTML = results.map((r, idx) => {
-      const t = (r.display_name || "").split(",").slice(0,2).join(", ");
-      const s = (r.display_name || "").split(",").slice(2).join(", ").trim();
-      return `
-        <div class="item" data-idx="${idx}">
-          <div class="t">${escapeHtml(t || r.display_name || "Resultado")}</div>
-          <div class="s">${escapeHtml(s)}</div>
-        </div>
-      `;
-    }).join("");
-
-    box.querySelectorAll(".item").forEach(el => {
-      el.addEventListener("click", async () => {
-        const idx = Number(el.getAttribute("data-idx"));
-        const r = results[idx];
-        const latlng = L.latLng(Number(r.lat), Number(r.lon));
-
-        closeSuggestEl(box);
-        await setStopLatLng(stop.id, latlng, true);
-        map.setView(latlng, Math.max(map.getZoom(), 12));
-      });
-    });
-
-    openSuggestEl(box);
-  }
-
-  function addStop(){
-    const id = makeId();
-    const label = stopLabel(stops.length);
-    stops.push({ id, label, latlng: null, marker: null, inputEl: null, suggestEl: null });
-    renderStops();
-  }
-
-  function removeStop(id){
-    const i = stops.findIndex(s => s.id === id);
-    if (i === -1) return;
-
-    if (stops[i].marker) map.removeLayer(stops[i].marker);
-    stops.splice(i, 1);
-
-    stops.forEach((s, idx) => s.label = stopLabel(idx));
-    renderStops();
-
-    if (stops.filter(s => s.latlng).length < 2) clearRouteOnly();
-  }
-
-  async function setStopLatLng(id, latlng, updateTextFromReverse=false){
-    const s = stops.find(x => x.id === id);
-    if (!s) return;
-
-    s.latlng = latlng;
-
-    if (s.marker) map.removeLayer(s.marker);
-    s.marker = L.marker(latlng, { draggable:true }).addTo(map);
-    s.marker.bindTooltip(s.label, { permanent:true, direction:"top", offset:[0,-10] });
-
-    s.marker.on("dragend", async () => {
-      s.latlng = s.marker.getLatLng();
-      try{
-        const pretty = await prettyRelativeCity(s.latlng);
-        s.inputEl.value = pretty.text;
-      } catch {}
-    });
-
-    if (updateTextFromReverse){
-      try{
-        const pretty = await prettyRelativeCity(latlng);
-        s.inputEl.value = pretty.text;
-      } catch {}
-    }
-  }
-
-  document.addEventListener("click", (e) => {
-    stops.forEach(s => {
-      if (!s.suggestEl || !s.inputEl) return;
-      const field = s.inputEl.closest(".field");
-      if (field && !field.contains(e.target)) closeSuggestEl(s.suggestEl);
-    });
-  });
-
-  // -----------------------------
-  // Solo punto (ciudad + millas desde tu ubicación)
-  // -----------------------------
-  let soloMode = false;
-  let soloMarker = null;
-  let userLatLng = null;
-
-  function getUserLocation(){
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject(new Error("No geolocation"));
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(L.latLng(pos.coords.latitude, pos.coords.longitude)),
-        reject,
-        { enableHighAccuracy:true, timeout:8000 }
-      );
-    });
-  }
-
-  async function handleSoloPoint(latlng){
-    // limpia markers de paradas visualmente
-    stops.forEach(s => {
-      if (s.marker) { map.removeLayer(s.marker); s.marker = null; s.latlng = null; }
-      if (s.inputEl) s.inputEl.value = "";
-    });
-    clearRouteOnly();
-
-    if (soloMarker) map.removeLayer(soloMarker);
-    soloMarker = L.marker(latlng).addTo(map);
-
-    // texto "1.24 mi NE City, State"
-    let prettyText = "Ciudad no encontrada";
-    try{
-      setStatus("Buscando ciudad…");
-      const pretty = await prettyRelativeCity(latlng);
-      prettyText = pretty.text;
-    } catch {}
-
-    setSingleCity(prettyText);
-
-    // millas desde tu ubicación
-    try{
-      if (!userLatLng){
-        setStatus("Obteniendo tu ubicación para calcular millas…");
-        userLatLng = await getUserLocation();
-      }
-      const miles = milesBetween(userLatLng, latlng);
-      setMetrics(`${miles.toFixed(2)} mi`, "Desde tu ubicación", "Solo punto");
-      setStatus("");
-    } catch(e){
-      setMetrics("—", "Activa ubicación para millas", "Solo punto");
-      setStatus("No hay permiso de ubicación. Actívalo para calcular millas.");
-    }
-
-    map.setView(latlng, Math.max(map.getZoom(), 14));
-  }
-
-  // -----------------------------
-  // Controls + modes
-  // -----------------------------
-  function setModeRoute(){
-    soloMode = false;
-    $("modeRoute").classList.add("active");
-    $("modeSolo").classList.remove("active");
-    setSingleCity("—");
-    setMetrics("—","Tiempo: —","Ruta con paradas");
-    setStatus("Modo Ruta: agrega paradas A, B, C... (busca o usa el mapa).");
-  }
-
-  function setModeSolo(){
-    soloMode = true;
-    $("modeSolo").classList.add("active");
-    $("modeRoute").classList.remove("active");
-    clearRouteOnly();
-    setSingleCity("—");
-    setMetrics("—","Desde tu ubicación","Solo punto");
-    setStatus("Modo Solo punto: haz click en el mapa.");
-  }
-
-  $("modeRoute").addEventListener("click", setModeRoute);
-  $("modeSolo").addEventListener("click", setModeSolo);
-
-  $("truckMode").addEventListener("click", () => {
-    isTruckMode = !isTruckMode;
-    $("truckMode").textContent = `🚛 Modo camión: ${isTruckMode ? "ON" : "OFF"}`;
-    setStatus(isTruckMode ? "Modo camión activado (tiempo estimado)." : "Modo camión desactivado.");
-  });
-
-  $("truckBreaks").addEventListener("click", () => {
-    useBreaks = !useBreaks;
-    $("truckBreaks").textContent = `🛑 Descansos: ${useBreaks ? "ON" : "OFF"}`;
-    setStatus(useBreaks ? `Descansos cada ${BREAK_EVERY_MILES} mi (+${BREAK_MINUTES} min)` : "Descansos desactivados.");
-  });
-
-  $("btnAddStop").addEventListener("click", addStop);
-  $("btnRoute").addEventListener("click", computeMultiRoute);
-
-  $("btnReset").addEventListener("click", () => {
-    if (soloMarker) { map.removeLayer(soloMarker); soloMarker = null; }
-    stops.forEach(s => { if (s.marker) map.removeLayer(s.marker); });
-    stops.length = 0;
-    clearRouteOnly();
-    setSingleCity("—");
-    setStatus("");
-    addStop(); addStop();
-    setModeRoute();
-  });
-
-  $("chipClearAll").addEventListener("click", () => $("btnReset").click());
-  $("chipFit").addEventListener("click", fitView);
-
-  $("chipClearRoute").addEventListener("click", () => {
-    if (soloMode){
-      if (soloMarker) { map.removeLayer(soloMarker); soloMarker = null; }
-      setSingleCity("—");
-      setMetrics("—","Desde tu ubicación","Solo punto");
-      setStatus("Marcador removido.");
-      return;
-    }
-    clearRouteOnly();
-    setStatus("Ruta removida.");
-  });
-
-  $("btnLocate").addEventListener("click", () => {
-    if (!navigator.geolocation){
-      setStatus("Geolocalización no disponible.");
-      return;
-    }
-    setStatus("Obteniendo tu ubicación…");
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      userLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-      map.setView(userLatLng, 14);
-      setStatus(soloMode ? "Ubicación lista. Ahora selecciona un punto." : "Ubicación lista.");
-    }, () => {
-      setStatus("No se pudo obtener tu ubicación.");
-    }, { enableHighAccuracy:true, timeout:8000 });
-  });
-
-  // Click en mapa: asigna parada activa (primera vacía o última) o modo solo
-  map.on("click", async (e) => {
-    if (soloMode){
-      await handleSoloPoint(e.latlng);
-      return;
-    }
-
-    let targetId = activePickStopId;
-    if (!targetId){
-      const empty = stops.find(s => !s.latlng);
-      targetId = empty ? empty.id : stops[stops.length - 1].id;
-    }
-    activePickStopId = null;
-
-    await setStopLatLng(targetId, e.latlng, true);
-    setStatus("");
-  });
-
-  // Init
-  addStop();
-  addStop();
-  setModeRoute();
-
-  // PWA service worker
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js");
-    });
-  }
+const map = L.map('map').setView([39.8283,-98.5795],4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let soloMode = true;
+let soloMarker = null;
+let userLatLng = null;
+let routeLayer = null;
+let routePoints = [];
+
+// ---------------- HELPERS ----------------
+
+function milesFromMeters(m){ return m/1609.344; }
+
+function formatTimeSeconds(sec){
+const totalMin=Math.round(sec/60);
+const h=Math.floor(totalMin/60);
+const m=totalMin%60;
+return h?`${h} h ${m} min`:`${m} min`;
+}
+
+function bearingDegrees(from,to){
+const lat1=from.lat*Math.PI/180;
+const lat2=to.lat*Math.PI/180;
+const dLon=(to.lng-from.lng)*Math.PI/180;
+const y=Math.sin(dLon)*Math.cos(lat2);
+const x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+let brng=Math.atan2(y,x)*180/Math.PI;
+return(brng+360)%360;
+}
+
+function degToCompass8(deg){
+const dirs=["N","NE","E","SE","S","SW","W","NW"];
+return dirs[Math.round(deg/45)%8];
+}
+
+// ---------------- NOMINATIM ----------------
+
+async function nominatimReverse(lat,lon){
+const url=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+const res=await fetch(url);
+const data=await res.json();
+const a=data.address||{};
+
+// SIN COUNTY
+const city=a.city||a.town||a.village||a.municipality||"";
+const locality=a.locality||a.city_district||a.suburb||a.neighbourhood||a.hamlet||"";
+const finalCity=city||locality||"Ciudad no encontrada";
+
+// ESTADO robusto
+const state=
+a.state||
+a.region||
+a.state_district||
+a.province||
+a.territory||
+"";
+
+return{
+city:finalCity,
+state,
+country:a.country||"",
+display:data.display_name||finalCity
+};
+}
+
+// centro ciudad
+const cacheCenter=new Map();
+
+async function getPlaceCenter(city,state,country){
+const key=`${city}|${state}|${country}`;
+if(cacheCenter.has(key))return cacheCenter.get(key);
+
+const q=[city,state,country].filter(Boolean).join(",");
+const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1`;
+const res=await fetch(url);
+const arr=await res.json();
+if(!arr.length)return null;
+
+const center=L.latLng(arr[0].lat,arr[0].lon);
+cacheCenter.set(key,center);
+return center;
+}
+
+async function prettyRelativeCity(latlng){
+const r=await nominatimReverse(latlng.lat,latlng.lng);
+const cityWithState=r.state?`${r.city}, ${r.state}`:r.city;
+
+const center=await getPlaceCenter(r.city,r.state,r.country);
+if(!center)return cityWithState;
+
+const mi=milesFromMeters(map.distance(center,latlng));
+const dir=degToCompass8(bearingDegrees(center,latlng));
+
+if(mi<0.15)return cityWithState;
+
+return `${mi.toFixed(2)} mi ${dir} ${cityWithState}`;
+}
+
+// ---------------- SOLO PUNTO ----------------
+
+async function handleSoloPoint(latlng){
+if(soloMarker)map.removeLayer(soloMarker);
+soloMarker=L.marker(latlng).addTo(map);
+
+const text=await prettyRelativeCity(latlng);
+document.getElementById("singleCity").innerText=`Ciudad: ${text}`;
+
+try{
+if(!userLatLng){
+userLatLng=await new Promise((resolve,reject)=>{
+navigator.geolocation.getCurrentPosition(
+pos=>resolve(L.latLng(pos.coords.latitude,pos.coords.longitude)),
+reject);
+});
+}
+const miles=milesFromMeters(map.distance(userLatLng,latlng));
+document.getElementById("metricDistance").innerText=`${miles.toFixed(2)} mi`;
+document.getElementById("metricDuration").innerText="Desde tu ubicación";
+}catch{
+document.getElementById("metricDistance").innerText="—";
+}
+}
+
+// ---------------- RUTA ----------------
+
+async function computeRoute(){
+if(routePoints.length<2)return;
+
+const coords=routePoints.map(p=>`${p.lng},${p.lat}`).join(";");
+const url=`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+const res=await fetch(url);
+const data=await res.json();
+const route=data.routes[0];
+
+if(routeLayer)map.removeLayer(routeLayer);
+routeLayer=L.geoJSON(route.geometry,{style:{weight:6}}).addTo(map);
+map.fitBounds(routeLayer.getBounds());
+
+const miles=milesFromMeters(route.distance);
+document.getElementById("metricDistance").innerText=`${miles.toFixed(2)} mi`;
+document.getElementById("metricDuration").innerText=`Tiempo: ${formatTimeSeconds(route.duration)}`;
+document.getElementById("singleCity").innerText="Ciudad: —";
+}
+
+// ---------------- MAP CLICK ----------------
+
+map.on("click",async e=>{
+if(soloMode){
+await handleSoloPoint(e.latlng);
+}else{
+routePoints.push(e.latlng);
+L.marker(e.latlng).addTo(map);
+}
+});
+
+// ---------------- BUTTONS ----------------
+
+document.getElementById("modeSolo").onclick=()=>{
+soloMode=true;
+routePoints=[];
+};
+
+document.getElementById("modeRoute").onclick=()=>{
+soloMode=false;
+routePoints=[];
+};
+
+document.getElementById("resetBtn").onclick=()=>{
+location.reload();
+};
+
 </script>
-
 </body>
 </html>

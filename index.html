@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ruta Pro Multi</title>
+  <title>Ruta Pro Multi (Camión)</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0b1220">
@@ -103,11 +103,8 @@
       gap:10px;
     }
 
-    /* Stops list */
-    #stops{
-      display:grid;
-      gap:10px;
-    }
+    #stops{ display:grid; gap:10px; }
+
     .row{
       display:grid;
       grid-template-columns:18px 1fr 38px 44px;
@@ -219,7 +216,6 @@
 
 <div id="map"></div>
 
-<!-- TOP -->
 <div class="top">
   <div class="card">
     <div class="bar">
@@ -232,7 +228,7 @@
         </div>
         <div style="min-width:0">
           <h1>Ruta Pro Multi</h1>
-          <p>Multi-paradas + Solo punto</p>
+          <p>Multi-paradas + Solo punto + Camión</p>
         </div>
       </div>
 
@@ -248,6 +244,11 @@
         <button class="chip" id="modeSolo">📌 Solo punto</button>
       </div>
 
+      <div class="chips">
+        <button class="chip" id="truckMode">🚛 Modo camión: OFF</button>
+        <button class="chip" id="truckBreaks">🛑 Descansos: OFF</button>
+      </div>
+
       <div id="stops"></div>
 
       <div class="chips" style="justify-content:space-between;">
@@ -258,7 +259,6 @@
   </div>
 </div>
 
-<!-- BOTTOM SHEET -->
 <div class="sheet">
   <div class="card">
     <div class="resultTop">
@@ -333,6 +333,31 @@
   }
 
   // -----------------------------
+  // Truck mode
+  // -----------------------------
+  let isTruckMode = false;
+  let useBreaks = false;
+
+  const TRUCK_AVG_MPH = 55;
+  const BREAK_EVERY_MILES = 150;
+  const BREAK_MINUTES = 15;
+
+  function truckTimeFromMiles(miles) {
+    let hours = miles / TRUCK_AVG_MPH;
+    if (useBreaks) {
+      const breaks = Math.floor(miles / BREAK_EVERY_MILES);
+      hours += (breaks * BREAK_MINUTES) / 60;
+    }
+    return hours;
+  }
+  function formatHoursToHM(hours) {
+    const totalMin = Math.round(hours * 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return h ? `${h} h ${m} min` : `${m} min`;
+  }
+
+  // -----------------------------
   // Nominatim
   // -----------------------------
   async function nominatimSearch(q){
@@ -349,14 +374,11 @@
     const data = await res.json();
     const a = data.address || {};
 
-    // Ciudad "real"
+    // ❌ NO COUNTY
     const city = a.city || a.town || a.village || a.municipality || "";
-    // Localidad tipo ciudad
     const locality = a.locality || a.city_district || a.suburb || a.neighbourhood || a.hamlet || "";
-    // Último recurso
-    const fallbackCounty = a.county || "";
 
-    const finalCity = city || locality || fallbackCounty || "Ciudad no encontrada";
+    const finalCity = city || locality || "Ciudad no encontrada";
 
     return {
       city: finalCity,
@@ -366,7 +388,7 @@
     };
   }
 
-  // Para formato "1.24 mi NE City": buscamos centro de la ciudad y calculamos distancia + rumbo
+  // Centro del lugar para "1.24 mi NE City, State"
   const placeCenterCache = new Map();
   async function getPlaceCenter(city, state, country){
     const key = `${city}|${state}|${country}`.toLowerCase();
@@ -389,20 +411,20 @@
   async function prettyRelativeCity(pointLatLng){
     const r = await nominatimReverse(pointLatLng.lat, pointLatLng.lng);
     const cityName = r.city;
-    const center = await getPlaceCenter(cityName, r.state, r.country);
+    const cityWithState = r.state ? `${cityName}, ${r.state}` : cityName;
 
+    const center = await getPlaceCenter(cityName, r.state, r.country);
     if(!center){
-      return { text: cityName, raw: r };
+      return { text: cityWithState, raw: r };
     }
 
     const mi = milesBetween(center, pointLatLng);
     const brng = bearingDegrees(center, pointLatLng);
     const dir = degToCompass8(brng);
 
-    // si está MUY cerca del centro, solo ciudad
-    if (mi < 0.15) return { text: cityName, raw: r };
+    if (mi < 0.15) return { text: cityWithState, raw: r };
 
-    return { text: `${mi.toFixed(2)} mi ${dir} ${cityName}`, raw: r };
+    return { text: `${mi.toFixed(2)} mi ${dir} ${cityWithState}`, raw: r };
   }
 
   // -----------------------------
@@ -442,12 +464,17 @@
     try{
       const route = await getRouteOSRM_Multi(pts);
       const miles = milesFromMeters(route.distance);
-      const timeTxt = formatTimeSeconds(route.duration);
+
+      let timeLine = `Tiempo: ${formatTimeSeconds(route.duration)} (auto)`;
+      if (isTruckMode) {
+        const truckTxt = formatHoursToHM(truckTimeFromMiles(miles));
+        timeLine = `Tiempo: ${truckTxt} (camión${useBreaks ? " + descansos" : ""})`;
+      }
 
       routeLayer = L.geoJSON(route.geometry, { style: { weight: 6 } }).addTo(map);
       map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
 
-      setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, `${pts.length} puntos`);
+      setMetrics(`${miles.toFixed(2)} mi`, timeLine, `${pts.length} puntos`);
       setSingleCity("—");
       setStatus("");
     } catch(e){
@@ -598,10 +625,8 @@
         const r = results[idx];
         const latlng = L.latLng(Number(r.lat), Number(r.lon));
 
-        stop.inputEl.value = r.display_name || "";
         closeSuggestEl(box);
-
-        setStopLatLng(stop.id, latlng, true);
+        await setStopLatLng(stop.id, latlng, true);
         map.setView(latlng, Math.max(map.getZoom(), 12));
       });
     });
@@ -623,7 +648,6 @@
     if (stops[i].marker) map.removeLayer(stops[i].marker);
     stops.splice(i, 1);
 
-    // re-etiquetar
     stops.forEach((s, idx) => s.label = stopLabel(idx));
     renderStops();
 
@@ -656,7 +680,6 @@
     }
   }
 
-  // click afuera para cerrar sugerencias
   document.addEventListener("click", (e) => {
     stops.forEach(s => {
       if (!s.suggestEl || !s.inputEl) return;
@@ -684,7 +707,7 @@
   }
 
   async function handleSoloPoint(latlng){
-    // limpia markers de paradas (solo visual)
+    // limpia markers de paradas visualmente
     stops.forEach(s => {
       if (s.marker) { map.removeLayer(s.marker); s.marker = null; s.latlng = null; }
       if (s.inputEl) s.inputEl.value = "";
@@ -694,7 +717,7 @@
     if (soloMarker) map.removeLayer(soloMarker);
     soloMarker = L.marker(latlng).addTo(map);
 
-    // ciudad "bonita"
+    // texto "1.24 mi NE City, State"
     let prettyText = "Ciudad no encontrada";
     try{
       setStatus("Buscando ciudad…");
@@ -704,7 +727,7 @@
 
     setSingleCity(prettyText);
 
-    // millas desde ubicación
+    // millas desde tu ubicación
     try{
       if (!userLatLng){
         setStatus("Obteniendo tu ubicación para calcular millas…");
@@ -722,7 +745,7 @@
   }
 
   // -----------------------------
-  // Mode buttons + controls
+  // Controls + modes
   // -----------------------------
   function setModeRoute(){
     soloMode = false;
@@ -746,18 +769,28 @@
   $("modeRoute").addEventListener("click", setModeRoute);
   $("modeSolo").addEventListener("click", setModeSolo);
 
+  $("truckMode").addEventListener("click", () => {
+    isTruckMode = !isTruckMode;
+    $("truckMode").textContent = `🚛 Modo camión: ${isTruckMode ? "ON" : "OFF"}`;
+    setStatus(isTruckMode ? "Modo camión activado (tiempo estimado)." : "Modo camión desactivado.");
+  });
+
+  $("truckBreaks").addEventListener("click", () => {
+    useBreaks = !useBreaks;
+    $("truckBreaks").textContent = `🛑 Descansos: ${useBreaks ? "ON" : "OFF"}`;
+    setStatus(useBreaks ? `Descansos cada ${BREAK_EVERY_MILES} mi (+${BREAK_MINUTES} min)` : "Descansos desactivados.");
+  });
+
   $("btnAddStop").addEventListener("click", addStop);
   $("btnRoute").addEventListener("click", computeMultiRoute);
 
   $("btnReset").addEventListener("click", () => {
-    // limpia todo
     if (soloMarker) { map.removeLayer(soloMarker); soloMarker = null; }
     stops.forEach(s => { if (s.marker) map.removeLayer(s.marker); });
     stops.length = 0;
     clearRouteOnly();
     setSingleCity("—");
     setStatus("");
-    // vuelve a A,B
     addStop(); addStop();
     setModeRoute();
   });
@@ -792,7 +825,7 @@
     }, { enableHighAccuracy:true, timeout:8000 });
   });
 
-  // Click en mapa: asigna parada activa o modo solo
+  // Click en mapa: asigna parada activa (primera vacía o última) o modo solo
   map.on("click", async (e) => {
     if (soloMode){
       await handleSoloPoint(e.latlng);
@@ -810,16 +843,12 @@
     setStatus("");
   });
 
-  // -----------------------------
-  // Init: create A and B
-  // -----------------------------
+  // Init
   addStop();
   addStop();
   setModeRoute();
 
-  // -----------------------------
-  // Service Worker (PWA)
-  // -----------------------------
+  // PWA service worker
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./service-worker.js");

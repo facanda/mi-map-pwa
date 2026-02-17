@@ -1,23 +1,47 @@
-const CACHE_NAME = "ruta-map-v1";
+const CACHE_NAME = "ruta-map-v2"; // cambia versión cuando actualices
 
-const urlsToCache = [
+const APP_SHELL = [
   "./",
   "./index.html",
-  "./manifest.json"
+  "./manifest.json",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png"
 ];
 
+// INSTALL
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(urlsToCache);
+      return cache.addAll(APP_SHELL);
     })
   );
+  self.skipWaiting();
 });
 
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+// ACTIVATE
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
     })
   );
+  self.clients.claim();
 });
+
+// FETCH
+self.addEventListener("fetch", event => {
+
+  const url = new URL(event.request.url);
+
+  // 🚫 NO cachear APIs externas ni tiles
+  if (
+    url.origin.includes("openstreetmap.org") ||
+    url.origin.includes("router.project-osrm.org") ||
+    url.origin.includes("nominatim.openstreetmap.org") ||
+    url.origin.includes("unpkg.com")

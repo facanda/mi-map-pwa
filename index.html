@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ruta A → B</title>
+
+  <link rel="manifest" href="./manifest.json">
+
+  <meta name="theme-color" content="#111111">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; }
+    #map { height: 70vh; }
+    .panel { padding: 12px; display: grid; gap: 10px; }
+    .btn {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .box {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="panel">
+
+  <button id="resetRoute" class="btn">Reset</button>
+
+  <div class="box">
+    <b>Punto A</b><br>
+    Ciudad: <span id="cityA">—</span><br>
+    Coords: <span id="coordsA">—</span>
+  </div>
+
+  <div class="box">
+    <b>Punto B</b><br>
+    Ciudad: <span id="cityB">—</span><br>
+    Coords: <span id="coordsB">—</span>
+  </div>
+
+  <div class="box">
+    <b>Ruta</b><br>
+    Distancia: <span id="distance">—</span><br>
+    Tiempo: <span id="duration">—</span>
+  </div>
+
+</div>
+
+<script>
+const map = L.map('map').setView([39.8283, -98.5795], 4);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19
+}).addTo(map);
+
+let pointA = null;
+let pointB = null;
+let markerA = null;
+let markerB = null;
+let routeLayer = null;
+
+function milesFromMeters(m) {
+  return m / 1609.344;
+}
+
+function formatTimeSeconds(sec) {
+  const min = Math.round(sec / 60);
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h ? `${h} h ${m} min` : `${m} min`;
+}
+
+async function reverse(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
+  const res = await fetch(url);
+  const data = await res.json();
+  const a = data.address || {};
+  return a.city || a.town || a.village || a.county || "No encontrado";
+}
+
+async function getRoute(a, b) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return data.routes[0];
+}
+
+async function updateRoute() {
+  if (!pointA || !pointB) return;
+
+  if (routeLayer) map.removeLayer(routeLayer);
+
+  const route = await getRoute(pointA, pointB);
+
+  routeLayer = L.geoJSON(route.geometry, { style: { weight: 5 } }).addTo(map);
+  map.fitBounds(routeLayer.getBounds());
+
+  const miles = milesFromMeters(route.distance);
+  document.getElementById('distance').textContent = miles.toFixed(2) + " mi";
+  document.getElementById('duration').textContent = formatTimeSeconds(route.duration);
+}
+
+function resetAll() {
+  pointA = null;
+  pointB = null;
+  if (markerA) map.removeLayer(markerA);
+  if (markerB) map.removeLayer(markerB);
+  if (routeLayer) map.removeLayer(routeLayer);
+
+  document.getElementById('cityA').textContent = "—";
+  document.getElementById('cityB').textContent = "—";
+  document.getElementById('coordsA').textContent = "—";
+  document.getElementById('coordsB').textContent = "—";
+  document.getElementById('distance').textContent = "—";
+  document.getElementById('duration').textContent = "—";
+}
+
+map.on('click', async e => {
+  if (!pointA) {
+    pointA = e.latlng;
+    markerA = L.marker(pointA).addTo(map);
+    document.getElementById('coordsA').textContent = `${pointA.lat.toFixed(5)}, ${pointA.lng.toFixed(5)}`;
+    document.getElementById('cityA').textContent = await reverse(pointA.lat, pointA.lng);
+    return;
+  }
+
+  if (!pointB) {
+    pointB = e.latlng;
+    markerB = L.marker(pointB).addTo(map);
+    document.getElementById('coordsB').textContent = `${pointB.lat.toFixed(5)}, ${pointB.lng.toFixed(5)}`;
+    document.getElementById('cityB').textContent = await reverse(pointB.lat, pointB.lng);
+    updateRoute();
+    return;
+  }
+
+  resetAll();
+});
+
+document.getElementById("resetRoute").addEventListener("click", resetAll);
+
+// REGISTER SERVICE WORKER
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js");
+  });
+}
+</script>
+
+</body>
+</html>

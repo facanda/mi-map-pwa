@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ruta Pro A → B</title>
+  <title>Ruta Pro</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0b1220">
@@ -13,261 +13,202 @@
 
   <style>
     :root{
-      --bg: #0b1220;
-      --card: rgba(17, 24, 39, .92);
-      --card2: rgba(255,255,255,.92);
-      --text: #e5e7eb;
-      --muted: rgba(229,231,235,.75);
-      --line: rgba(255,255,255,.12);
-      --accent: #22c55e;
-      --danger: #ef4444;
-      --shadow: 0 18px 40px rgba(0,0,0,.35);
-      --radius: 18px;
+      --bg:#0b1220;
+      --card:rgba(17,24,39,.92);
+      --text:#e5e7eb;
+      --muted:rgba(229,231,235,.75);
+      --line:rgba(255,255,255,.12);
+      --shadow:0 18px 40px rgba(0,0,0,.35);
+      --radius:18px;
     }
-
     *{ box-sizing:border-box; }
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
+      background:var(--bg);
+      color:var(--text);
+      height:100vh;
+      overflow:hidden;
     }
+    #map{ position:absolute; inset:0; }
 
-    #map{
-      position: absolute;
-      inset: 0;
-    }
-
-    /* Top app bar */
     .top{
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      right: 12px;
-      z-index: 9999;
-      display: grid;
-      gap: 10px;
-      pointer-events: none;
+      position:absolute;
+      top:12px; left:12px; right:12px;
+      z-index:9999;
+      display:grid;
+      gap:10px;
+      pointer-events:none;
     }
-
     .card{
-      pointer-events: auto;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
+      pointer-events:auto;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
       backdrop-filter: blur(10px);
     }
-
     .bar{
-      padding: 10px 12px;
+      padding:10px 12px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap: 10px;
+      gap:10px;
     }
-
     .brand{
       display:flex;
       align-items:center;
       gap:10px;
-      min-width: 0;
+      min-width:0;
     }
-
     .logo{
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(34,197,94,.35), rgba(59,130,246,.25));
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border: 1px solid rgba(255,255,255,.10);
+      width:34px;height:34px;
+      border-radius:12px;
+      background:linear-gradient(135deg, rgba(34,197,94,.35), rgba(59,130,246,.25));
+      display:flex;align-items:center;justify-content:center;
+      border:1px solid rgba(255,255,255,.10);
     }
-    .logo svg{ opacity:.95 }
-
     .brand h1{
       margin:0;
-      font-size: 14px;
-      letter-spacing:.2px;
-      line-height: 1.1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size:14px;
+      line-height:1.1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     .brand p{
       margin:0;
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
-
     .btnRow{ display:flex; gap:8px; align-items:center; }
     .iconBtn{
-      width: 38px; height: 38px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,.06);
-      color: var(--text);
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      width:38px;height:38px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      display:flex;align-items:center;justify-content:center;
       cursor:pointer;
     }
-    .iconBtn:active{ transform: translateY(1px); }
+    .iconBtn:active{ transform:translateY(1px); }
 
-    /* Search panel */
     .search{
-      padding: 10px 12px 12px;
+      padding:10px 12px 12px;
       display:grid;
-      gap: 10px;
+      gap:10px;
     }
-
     .row{
       display:grid;
-      grid-template-columns: 18px 1fr 38px;
-      gap: 10px;
+      grid-template-columns:18px 1fr 38px;
+      gap:10px;
       align-items:center;
     }
-
     .dot{
-      width: 10px; height: 10px; border-radius: 999px;
-      background: #93c5fd;
+      width:10px;height:10px;border-radius:999px;
       justify-self:center;
+      background:#93c5fd;
     }
-    .dot.a{ background: #34d399; }
-    .dot.b{ background: #60a5fa; }
+    .dot.a{ background:#34d399; }
+    .dot.b{ background:#60a5fa; }
 
-    .field{
-      position: relative;
-    }
-
+    .field{ position:relative; }
     input{
-      width: 100%;
-      height: 44px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      outline: none;
-      background: rgba(255,255,255,.06);
-      color: var(--text);
-      padding: 0 12px;
-      font-size: 14px;
+      width:100%;
+      height:44px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      outline:none;
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:0 12px;
+      font-size:14px;
     }
-    input::placeholder{ color: rgba(229,231,235,.55); }
+    input::placeholder{ color:rgba(229,231,235,.55); }
 
     .smallBtn{
-      height: 44px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,.06);
-      color: var(--text);
+      height:44px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
       cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      display:flex;align-items:center;justify-content:center;
     }
 
     .suggest{
       position:absolute;
-      top: 48px;
-      left:0;
-      right:0;
-      background: rgba(17,24,39,.98);
-      border: 1px solid var(--line);
-      border-radius: 14px;
+      top:48px; left:0; right:0;
+      background:rgba(17,24,39,.98);
+      border:1px solid var(--line);
+      border-radius:14px;
       overflow:hidden;
-      box-shadow: var(--shadow);
+      box-shadow:var(--shadow);
       display:none;
-      z-index: 99999;
+      z-index:99999;
     }
     .suggest.open{ display:block; }
-
     .item{
-      padding: 10px 12px;
-      border-top: 1px solid rgba(255,255,255,.08);
+      padding:10px 12px;
+      border-top:1px solid rgba(255,255,255,.08);
       cursor:pointer;
-      line-height: 1.2;
+      line-height:1.2;
     }
-    .item:first-child{ border-top: 0; }
-    .item:hover{ background: rgba(255,255,255,.06); }
-    .item .t{ font-size: 13px; color: var(--text); }
-    .item .s{ font-size: 12px; color: var(--muted); margin-top:4px; }
+    .item:first-child{ border-top:0; }
+    .item:hover{ background:rgba(255,255,255,.06); }
+    .item .t{ font-size:13px; color:var(--text); }
+    .item .s{ font-size:12px; color:var(--muted); margin-top:4px; }
 
-    /* Bottom sheet */
-    .sheet{
-      position:absolute;
-      left: 12px;
-      right: 12px;
-      bottom: 12px;
-      z-index: 9999;
-      pointer-events: none;
-      display:grid;
-      gap: 10px;
-    }
-    .sheet .card{
-      pointer-events:auto;
-      padding: 12px;
-    }
-
-    .resultTop{
-      display:flex;
-      align-items:flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .metrics{
-      display:grid;
-      gap: 6px;
-    }
-    .big{
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: .2px;
-    }
-    .sub{
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .chips{
-      display:flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
+    .chips{ display:flex; gap:8px; flex-wrap:wrap; }
     .chip{
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.06);
-      font-size: 12px;
-      color: var(--text);
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.06);
+      font-size:12px;
+      color:var(--text);
       cursor:pointer;
       user-select:none;
     }
+    .chip.active{
+      border-color: rgba(34,197,94,.55);
+      box-shadow: 0 0 0 2px rgba(34,197,94,.18) inset;
+    }
     .chip.danger{ border-color: rgba(239,68,68,.35); }
 
-    .status{
-      margin-top: 10px;
-      font-size: 12px;
-      color: rgba(229,231,235,.7);
+    .sheet{
+      position:absolute;
+      left:12px; right:12px; bottom:12px;
+      z-index:9999;
+      pointer-events:none;
+      display:grid;
+      gap:10px;
     }
+    .sheet .card{ pointer-events:auto; padding:12px; }
+    .resultTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .metrics{ display:grid; gap:6px; }
+    .big{ font-size:20px; font-weight:800; letter-spacing:.2px; }
+    .sub{ color:var(--muted); font-size:12px; }
+    .status{ margin-top:10px; font-size:12px; color:rgba(229,231,235,.7); }
 
-    /* Make Leaflet controls look nicer on dark bg */
     .leaflet-control-zoom a{
-      background: rgba(17,24,39,.92) !important;
-      color: #e5e7eb !important;
-      border: 1px solid rgba(255,255,255,.12) !important;
+      background:rgba(17,24,39,.92) !important;
+      color:#e5e7eb !important;
+      border:1px solid rgba(255,255,255,.12) !important;
     }
 
-    @media (max-width: 420px){
+    @media (max-width:420px){
       .brand p{ display:none; }
-      .row{ grid-template-columns: 14px 1fr 38px; }
+      .row{ grid-template-columns:14px 1fr 38px; }
     }
   </style>
 </head>
@@ -281,7 +222,6 @@
     <div class="bar">
       <div class="brand">
         <div class="logo" aria-hidden="true">
-          <!-- mini pin -->
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M12 22s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11Z" stroke="white" stroke-width="2"/>
             <circle cx="12" cy="11" r="2.5" stroke="white" stroke-width="2"/>
@@ -289,7 +229,7 @@
         </div>
         <div style="min-width:0">
           <h1>Ruta Pro</h1>
-          <p>OSRM (ruta) + Nominatim (ciudad)</p>
+          <p>Ruta (OSRM) + Ciudad (Nominatim)</p>
         </div>
       </div>
 
@@ -300,6 +240,11 @@
     </div>
 
     <div class="search">
+      <div class="chips">
+        <button class="chip active" id="modeRoute">🧭 Ruta A→B</button>
+        <button class="chip" id="modeSolo">📌 Solo punto</button>
+      </div>
+
       <div class="row">
         <div class="dot a"></div>
         <div class="field">
@@ -318,9 +263,9 @@
         <button class="smallBtn" id="pickB" title="Elegir B en el mapa">B</button>
       </div>
 
-      <div style="display:flex; gap:8px; justify-content:space-between;">
+      <div class="chips" style="justify-content:space-between;">
         <button class="chip" id="btnSwap">⇅ Intercambiar</button>
-        <button class="chip" id="btnRoute">🧭 Calcular ruta</button>
+        <button class="chip" id="btnRoute">Calcular ruta</button>
       </div>
     </div>
   </div>
@@ -333,12 +278,13 @@
       <div class="metrics">
         <div class="big" id="metricDistance">—</div>
         <div class="sub" id="metricDuration">Tiempo: —</div>
+        <div class="sub" id="singleCity">Ciudad: —</div>
       </div>
-      <div class="sub" style="text-align:right" id="metricFromTo">A → B</div>
+      <div class="sub" style="text-align:right" id="metricFromTo">—</div>
     </div>
 
-    <div class="chips">
-      <div class="chip" id="chipFit">🔎 Ver ruta</div>
+    <div class="chips" style="margin-top:10px;">
+      <div class="chip" id="chipFit">🔎 Ver</div>
       <div class="chip" id="chipClearRoute">🧹 Quitar ruta</div>
       <div class="chip danger" id="chipClearAll">🗑 Reset total</div>
     </div>
@@ -352,7 +298,6 @@
   // Map init
   // -----------------------------
   const map = L.map('map', { zoomControl: true }).setView([39.8283, -98.5795], 4);
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap'
@@ -366,6 +311,10 @@
   let routeLayer = null;
 
   let pickMode = null; // "A" | "B" | null
+  let soloMode = false;
+  let soloMarker = null;
+
+  let userLatLng = null; // para "Solo punto" (millas desde tu ubicación)
 
   const $ = (id) => document.getElementById(id);
 
@@ -382,11 +331,15 @@
   function setMetrics(distanceText, durationText, fromToText){
     $("metricDistance").textContent = distanceText ?? "—";
     $("metricDuration").textContent = durationText ?? "Tiempo: —";
-    $("metricFromTo").textContent = fromToText ?? "A → B";
+    $("metricFromTo").textContent = fromToText ?? "—";
+  }
+
+  function setSingleCity(text){
+    $("singleCity").textContent = `Ciudad: ${text || "—"}`;
   }
 
   // -----------------------------
-  // Nominatim (search + reverse)
+  // Nominatim
   // -----------------------------
   async function nominatimSearch(q){
     const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&addressdetails=1&limit=6`;
@@ -424,25 +377,28 @@
   }
 
   // -----------------------------
-  // Markers + route drawing
+  // Markers
   // -----------------------------
-  function ensureMarker(which, latlng){
-    const label = which === "A" ? "A" : "B";
-    const draggable = true;
-
+  function makeMarkerIcon(which){
+    const label = which;
+    const bg = which === "A" ? "rgba(34,197,94,.95)" : "rgba(96,165,250,.95)";
     const iconHtml = `
       <div style="
         width:30px;height:30px;border-radius:12px;
-        background:${which==="A" ? "rgba(34,197,94,.95)" : "rgba(96,165,250,.95)"};
+        background:${bg};
         border:2px solid rgba(255,255,255,.85);
         box-shadow:0 12px 24px rgba(0,0,0,.28);
         display:flex;align-items:center;justify-content:center;
-        color:#0b1220;font-weight:900;
-        ">
+        color:#0b1220;font-weight:900;">
         ${label}
       </div>
     `;
-    const icon = L.divIcon({ html: iconHtml, className: "", iconSize: [30,30], iconAnchor:[15,15] });
+    return L.divIcon({ html: iconHtml, className: "", iconSize: [30,30], iconAnchor:[15,15] });
+  }
+
+  function ensureMarker(which, latlng){
+    const draggable = true;
+    const icon = makeMarkerIcon(which);
 
     if(which === "A"){
       if(markerA) map.removeLayer(markerA);
@@ -463,20 +419,33 @@
     }
   }
 
+  // -----------------------------
+  // Route / Reset helpers
+  // -----------------------------
   function clearRouteOnly(){
     if(routeLayer){ map.removeLayer(routeLayer); routeLayer = null; }
-    setMetrics("—","Tiempo: —", "A → B");
+    setMetrics("—", "Tiempo: —", soloMode ? "Solo punto" : "Ruta A→B");
   }
 
   function resetAll(){
-    pointA = null; pointB = null; pickMode = null;
+    pickMode = null;
+    pointA = null; pointB = null;
     if(markerA) map.removeLayer(markerA);
     if(markerB) map.removeLayer(markerB);
     markerA = null; markerB = null;
-    clearRouteOnly();
+
+    if(routeLayer) map.removeLayer(routeLayer);
+    routeLayer = null;
+
+    if(soloMarker) map.removeLayer(soloMarker);
+    soloMarker = null;
+
     $("inputA").value = "";
     $("inputB").value = "";
     closeSuggest("A"); closeSuggest("B");
+
+    setSingleCity("—");
+    setMetrics("—", "Tiempo: —", soloMode ? "Solo punto" : "Ruta A→B");
     setStatus("");
   }
 
@@ -493,20 +462,23 @@
   }
 
   async function updateRouteIfReady(){
+    if(soloMode) return; // en solo mode no calculamos ruta
     if(!pointA || !pointB) return;
     await computeRoute();
   }
 
   async function computeRoute(){
-    if(!pointA || !pointB) {
+    if(soloMode){
+      setStatus("Estás en modo Solo punto. Desactívalo para calcular ruta.");
+      return;
+    }
+    if(!pointA || !pointB){
       setStatus("Selecciona Punto A y Punto B.");
       return;
     }
 
     setStatus("Calculando ruta…");
-
-    // clear old route
-    if(routeLayer) map.removeLayer(routeLayer);
+    clearRouteOnly();
 
     try{
       const route = await getRouteOSRM(pointA, pointB);
@@ -516,25 +488,89 @@
 
       routeLayer = L.geoJSON(route.geometry, { style: { weight: 6 } }).addTo(map);
 
-      const fromTo = `${$("inputA").value ? "A" : "A"} → ${$("inputB").value ? "B" : "B"}`;
-      setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, fromTo);
-
+      setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, "Ruta A→B");
+      setSingleCity("—");
       setStatus("");
     } catch(e){
-      // fallback recta
       const meters = map.distance(pointA, pointB);
       const miles = milesFromMeters(meters);
-      setMetrics(`${miles.toFixed(2)} mi (recta)`, `Tiempo: —`, "A → B");
+      setMetrics(`${miles.toFixed(2)} mi (recta)`, `Tiempo: —`, "Ruta A→B");
       setStatus("OSRM (demo) no disponible. Mostrando distancia en línea recta.");
     }
   }
 
-  function fitRoute(){
-    if(routeLayer) map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
-    else if(pointA && pointB){
-      const bounds = L.latLngBounds([pointA, pointB]);
-      map.fitBounds(bounds, { padding: [60, 60] });
+  function fitView(){
+    if(soloMode && soloMarker){
+      map.setView(soloMarker.getLatLng(), Math.max(map.getZoom(), 14));
+      return;
     }
+    if(routeLayer){
+      map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
+      return;
+    }
+    if(pointA && pointB){
+      map.fitBounds(L.latLngBounds([pointA, pointB]), { padding:[60,60] });
+      return;
+    }
+    if(pointA) map.setView(pointA, 12);
+  }
+
+  // -----------------------------
+  // Solo punto logic (ciudad + millas desde tu ubicación)
+  // -----------------------------
+  function milesBetween(a, b){
+    const meters = map.distance(a, b);
+    return meters / 1609.344;
+  }
+
+  function getUserLocation(){
+    return new Promise((resolve, reject) => {
+      if(!navigator.geolocation) return reject(new Error("No geolocation"));
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve(L.latLng(pos.coords.latitude, pos.coords.longitude)),
+        reject,
+        { enableHighAccuracy:true, timeout:8000 }
+      );
+    });
+  }
+
+  async function handleSoloPoint(latlng){
+    // limpia ruta y A/B para que no confunda
+    if(routeLayer){ map.removeLayer(routeLayer); routeLayer = null; }
+    if(markerA){ map.removeLayer(markerA); markerA=null; pointA=null; }
+    if(markerB){ map.removeLayer(markerB); markerB=null; pointB=null; }
+    $("inputA").value = "";
+    $("inputB").value = "";
+
+    // pone marker
+    if(soloMarker) map.removeLayer(soloMarker);
+    soloMarker = L.marker(latlng).addTo(map);
+
+    // ciudad
+    let cityText = "No encontrado";
+    try{
+      setStatus("Buscando ciudad…");
+      const r = await nominatimReverse(latlng.lat, latlng.lng);
+      cityText = `${r.city}${r.state ? ", " + r.state : ""}${r.country ? ", " + r.country : ""}`;
+    } catch(e){}
+
+    setSingleCity(cityText);
+
+    // millas desde tu ubicación
+    try{
+      if(!userLatLng){
+        setStatus("Obteniendo tu ubicación para calcular millas…");
+        userLatLng = await getUserLocation();
+      }
+      const miles = milesBetween(userLatLng, latlng);
+      setMetrics(`${miles.toFixed(2)} mi`, "Desde tu ubicación", "Solo punto");
+      setStatus("");
+    } catch(e){
+      setMetrics("—", "Activa ubicación para millas", "Solo punto");
+      setStatus("No hay permiso de ubicación. Actívalo para calcular millas.");
+    }
+
+    map.setView(latlng, Math.max(map.getZoom(), 14));
   }
 
   // -----------------------------
@@ -542,6 +578,16 @@
   // -----------------------------
   function openSuggest(which){ $(which==="A" ? "suggestA" : "suggestB").classList.add("open"); }
   function closeSuggest(which){ $(which==="A" ? "suggestA" : "suggestB").classList.remove("open"); }
+
+  function escapeHtml(str){
+    return (str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
   function renderSuggest(which, results){
     const box = $(which==="A" ? "suggestA" : "suggestB");
     if(!results?.length){
@@ -549,6 +595,7 @@
       openSuggest(which);
       return;
     }
+
     box.innerHTML = results.map((r, idx) => {
       const t = (r.display_name || "").split(",").slice(0,2).join(", ");
       const s = (r.display_name || "").split(",").slice(2).join(", ").trim();
@@ -567,6 +614,13 @@
         const lat = Number(r.lat), lon = Number(r.lon);
         const latlng = L.latLng(lat, lon);
 
+        // Si estás en Solo punto, al seleccionar un resultado se trata como soloMarker
+        if(soloMode){
+          closeSuggest(which);
+          await handleSoloPoint(latlng);
+          return;
+        }
+
         if(which==="A"){
           pointA = latlng;
           ensureMarker("A", latlng);
@@ -579,7 +633,6 @@
           closeSuggest("B");
         }
 
-        // move map nicely
         map.setView(latlng, Math.max(map.getZoom(), 12));
         await updateRouteIfReady();
       });
@@ -588,16 +641,6 @@
     openSuggest(which);
   }
 
-  function escapeHtml(str){
-    return (str||"")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  // debounce helper
   function debounce(fn, ms){
     let t;
     return (...args) => {
@@ -631,7 +674,6 @@
   $("inputA").addEventListener("input", onTypeA);
   $("inputB").addEventListener("input", onTypeB);
 
-  // close suggest clicking outside
   document.addEventListener("click", (e) => {
     const aField = $("inputA").closest(".field");
     const bField = $("inputB").closest(".field");
@@ -640,22 +682,64 @@
   });
 
   // -----------------------------
-  // Map click pick mode
+  // Mode buttons
   // -----------------------------
-  function setPickMode(which){
-    pickMode = which;
-    setStatus(`Modo: selecciona punto ${which} en el mapa (haz click).`);
+  function setModeRoute(){
+    soloMode = false;
+    $("modeRoute").classList.add("active");
+    $("modeSolo").classList.remove("active");
+    setSingleCity("—");
+    setMetrics("—","Tiempo: —","Ruta A→B");
+    setStatus("Modo Ruta: selecciona A y B (busca o click).");
   }
 
-  $("pickA").addEventListener("click", () => setPickMode("A"));
-  $("pickB").addEventListener("click", () => setPickMode("B"));
+  function setModeSolo(){
+    soloMode = true;
+    $("modeSolo").classList.add("active");
+    $("modeRoute").classList.remove("active");
+    clearRouteOnly();
+    // limpia A/B visualmente
+    if(markerA){ map.removeLayer(markerA); markerA=null; pointA=null; }
+    if(markerB){ map.removeLayer(markerB); markerB=null; pointB=null; }
+    $("inputA").value = "";
+    $("inputB").value = "";
+    setSingleCity("—");
+    setMetrics("—","Desde tu ubicación","Solo punto");
+    setStatus("Modo Solo punto: haz click en el mapa o busca y selecciona.");
+  }
 
+  $("modeRoute").addEventListener("click", setModeRoute);
+  $("modeSolo").addEventListener("click", setModeSolo);
+
+  // -----------------------------
+  // Pick buttons
+  // -----------------------------
+  $("pickA").addEventListener("click", () => {
+    if(soloMode){ setStatus("Estás en Solo punto. Cambia a Ruta para elegir A/B."); return; }
+    pickMode = "A";
+    setStatus("Selecciona Punto A en el mapa (click).");
+  });
+
+  $("pickB").addEventListener("click", () => {
+    if(soloMode){ setStatus("Estás en Solo punto. Cambia a Ruta para elegir A/B."); return; }
+    pickMode = "B";
+    setStatus("Selecciona Punto B en el mapa (click).");
+  });
+
+  // -----------------------------
+  // Map click
+  // -----------------------------
   map.on("click", async (e) => {
+    if(soloMode){
+      await handleSoloPoint(e.latlng);
+      return;
+    }
+
+    // modo ruta
     if(!pickMode){
-      // comportamiento tipo “smart”: si no hay A, crea A; si hay A y no B, crea B; si ambos, reemplaza B
-      if(!pointA){ pickMode = "A"; }
-      else if(!pointB){ pickMode = "B"; }
-      else { pickMode = "B"; }
+      if(!pointA) pickMode = "A";
+      else if(!pointB) pickMode = "B";
+      else pickMode = "B"; // reemplaza B
     }
 
     const which = pickMode;
@@ -679,15 +763,26 @@
   // -----------------------------
   $("btnReset").addEventListener("click", resetAll);
   $("chipClearAll").addEventListener("click", resetAll);
-  $("chipClearRoute").addEventListener("click", () => { clearRouteOnly(); setStatus("Ruta removida."); });
-  $("chipFit").addEventListener("click", fitRoute);
+
+  $("chipClearRoute").addEventListener("click", () => {
+    if(soloMode){
+      if(soloMarker){ map.removeLayer(soloMarker); soloMarker=null; }
+      setSingleCity("—");
+      setMetrics("—","Desde tu ubicación","Solo punto");
+      setStatus("Marcador removido.");
+    } else {
+      clearRouteOnly();
+      setStatus("Ruta removida.");
+    }
+  });
+
+  $("chipFit").addEventListener("click", fitView);
 
   $("btnSwap").addEventListener("click", async () => {
-    // swap points + inputs + markers
+    if(soloMode){ setStatus("Solo punto no usa A/B."); return; }
     const tmpP = pointA; pointA = pointB; pointB = tmpP;
     const tmpT = $("inputA").value; $("inputA").value = $("inputB").value; $("inputB").value = tmpT;
 
-    // redraw markers
     if(pointA) ensureMarker("A", pointA); else if(markerA){ map.removeLayer(markerA); markerA=null; }
     if(pointB) ensureMarker("B", pointB); else if(markerB){ map.removeLayer(markerB); markerB=null; }
 
@@ -696,7 +791,7 @@
 
   $("btnRoute").addEventListener("click", computeRoute);
 
-  $("btnLocate").addEventListener("click", () => {
+  $("btnLocate").addEventListener("click", async () => {
     if(!navigator.geolocation){
       setStatus("Geolocalización no disponible.");
       return;
@@ -704,8 +799,16 @@
     setStatus("Obteniendo tu ubicación…");
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+      userLatLng = latlng; // guarda para Solo punto
       map.setView(latlng, 14);
-      // si no hay A, pon A aquí; si A existe, pon B aquí
+
+      if(soloMode){
+        // en solo mode, solo centra (no crea punto)
+        setStatus("Ubicación lista. Ahora selecciona un punto para ver millas.");
+        return;
+      }
+
+      // modo ruta: si no hay A, poner A en tu ubicación; si ya hay A, poner B
       if(!pointA){
         pointA = latlng;
         ensureMarker("A", pointA);
@@ -719,8 +822,11 @@
       setStatus("");
     }, () => {
       setStatus("No se pudo obtener tu ubicación.");
-    }, { enableHighAccuracy: true, timeout: 8000 });
+    }, { enableHighAccuracy:true, timeout:8000 });
   });
+
+  // Init mode
+  setModeRoute();
 
   // -----------------------------
   // Service Worker (PWA)

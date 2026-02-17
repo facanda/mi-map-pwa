@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ruta Pro</title>
+  <title>Ruta Pro Multi</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0b1220">
@@ -102,9 +102,15 @@
       display:grid;
       gap:10px;
     }
+
+    /* Stops list */
+    #stops{
+      display:grid;
+      gap:10px;
+    }
     .row{
       display:grid;
-      grid-template-columns:18px 1fr 38px;
+      grid-template-columns:18px 1fr 38px 44px;
       gap:10px;
       align-items:center;
     }
@@ -113,9 +119,6 @@
       justify-self:center;
       background:#93c5fd;
     }
-    .dot.a{ background:#34d399; }
-    .dot.b{ background:#60a5fa; }
-
     .field{ position:relative; }
     input{
       width:100%;
@@ -129,7 +132,6 @@
       font-size:14px;
     }
     input::placeholder{ color:rgba(229,231,235,.55); }
-
     .smallBtn{
       height:44px;
       border-radius:14px;
@@ -138,6 +140,7 @@
       color:var(--text);
       cursor:pointer;
       display:flex;align-items:center;justify-content:center;
+      width:100%;
     }
 
     .suggest{
@@ -208,7 +211,7 @@
 
     @media (max-width:420px){
       .brand p{ display:none; }
-      .row{ grid-template-columns:14px 1fr 38px; }
+      .row{ grid-template-columns:14px 1fr 38px 44px; }
     }
   </style>
 </head>
@@ -228,8 +231,8 @@
           </svg>
         </div>
         <div style="min-width:0">
-          <h1>Ruta Pro</h1>
-          <p>Ruta (OSRM) + Ciudad (Nominatim)</p>
+          <h1>Ruta Pro Multi</h1>
+          <p>Multi-paradas + Solo punto</p>
         </div>
       </div>
 
@@ -241,30 +244,14 @@
 
     <div class="search">
       <div class="chips">
-        <button class="chip active" id="modeRoute">🧭 Ruta A→B</button>
+        <button class="chip active" id="modeRoute">🧭 Ruta con paradas</button>
         <button class="chip" id="modeSolo">📌 Solo punto</button>
       </div>
 
-      <div class="row">
-        <div class="dot a"></div>
-        <div class="field">
-          <input id="inputA" placeholder="Punto A (dirección o ciudad)" autocomplete="off" />
-          <div class="suggest" id="suggestA"></div>
-        </div>
-        <button class="smallBtn" id="pickA" title="Elegir A en el mapa">A</button>
-      </div>
-
-      <div class="row">
-        <div class="dot b"></div>
-        <div class="field">
-          <input id="inputB" placeholder="Punto B (dirección o ciudad)" autocomplete="off" />
-          <div class="suggest" id="suggestB"></div>
-        </div>
-        <button class="smallBtn" id="pickB" title="Elegir B en el mapa">B</button>
-      </div>
+      <div id="stops"></div>
 
       <div class="chips" style="justify-content:space-between;">
-        <button class="chip" id="btnSwap">⇅ Intercambiar</button>
+        <button class="chip" id="btnAddStop">➕ Agregar parada</button>
         <button class="chip" id="btnRoute">Calcular ruta</button>
       </div>
     </div>
@@ -285,7 +272,7 @@
 
     <div class="chips" style="margin-top:10px;">
       <div class="chip" id="chipFit">🔎 Ver</div>
-      <div class="chip" id="chipClearRoute">🧹 Quitar ruta</div>
+      <div class="chip" id="chipClearRoute">🧹 Quitar</div>
       <div class="chip danger" id="chipClearAll">🗑 Reset total</div>
     </div>
 
@@ -297,29 +284,28 @@
   // -----------------------------
   // Map init
   // -----------------------------
-  const map = L.map('map', { zoomControl: true }).setView([39.8283, -98.5795], 4);
+  const map = L.map('map').setView([39.8283, -98.5795], 4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap'
   }).addTo(map);
 
-  // -----------------------------
-  // State
-  // -----------------------------
-  let pointA = null, pointB = null;
-  let markerA = null, markerB = null;
-  let routeLayer = null;
-
-  let pickMode = null; // "A" | "B" | null
-  let soloMode = false;
-  let soloMarker = null;
-
-  let userLatLng = null; // para "Solo punto" (millas desde tu ubicación)
-
   const $ = (id) => document.getElementById(id);
 
+  // -----------------------------
+  // UI helpers
+  // -----------------------------
   function setStatus(msg){ $("status").textContent = msg || ""; }
+  function setSingleCity(text){ $("singleCity").textContent = `Ciudad: ${text || "—"}`; }
+  function setMetrics(distanceText, durationText, fromToText){
+    $("metricDistance").textContent = distanceText ?? "—";
+    $("metricDuration").textContent = durationText ?? "Tiempo: —";
+    $("metricFromTo").textContent = fromToText ?? "—";
+  }
 
+  // -----------------------------
+  // Math helpers
+  // -----------------------------
   function milesFromMeters(m){ return m / 1609.344; }
   function formatTimeSeconds(sec){
     const totalMin = Math.round(sec / 60);
@@ -327,15 +313,23 @@
     const m = totalMin % 60;
     return h ? `${h} h ${m} min` : `${m} min`;
   }
+  function milesBetween(a,b){ return milesFromMeters(map.distance(a,b)); }
 
-  function setMetrics(distanceText, durationText, fromToText){
-    $("metricDistance").textContent = distanceText ?? "—";
-    $("metricDuration").textContent = durationText ?? "Tiempo: —";
-    $("metricFromTo").textContent = fromToText ?? "—";
+  // Bearing for "NE, SW..."
+  function bearingDegrees(from, to){
+    const lat1 = from.lat * Math.PI/180;
+    const lat2 = to.lat * Math.PI/180;
+    const dLon = (to.lng - from.lng) * Math.PI/180;
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+    let brng = Math.atan2(y, x) * 180/Math.PI;
+    brng = (brng + 360) % 360;
+    return brng;
   }
-
-  function setSingleCity(text){
-    $("singleCity").textContent = `Ciudad: ${text || "—"}`;
+  function degToCompass8(deg){
+    const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+    const i = Math.round(deg / 45) % 8;
+    return dirs[i];
   }
 
   // -----------------------------
@@ -349,26 +343,76 @@
   }
 
   async function nominatimReverse(lat, lon){
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
     const res = await fetch(url, { headers: { "Accept":"application/json" }});
     if(!res.ok) throw new Error("Nominatim reverse failed");
     const data = await res.json();
     const a = data.address || {};
-    const city = a.city || a.town || a.village || a.hamlet || a.county || "No encontrado";
-    const state = a.state || "";
-    const country = a.country || "";
-    return { city, state, country, display: data.display_name || city };
+
+    // Ciudad "real"
+    const city = a.city || a.town || a.village || a.municipality || "";
+    // Localidad tipo ciudad
+    const locality = a.locality || a.city_district || a.suburb || a.neighbourhood || a.hamlet || "";
+    // Último recurso
+    const fallbackCounty = a.county || "";
+
+    const finalCity = city || locality || fallbackCounty || "Ciudad no encontrada";
+
+    return {
+      city: finalCity,
+      state: a.state || "",
+      country: a.country || "",
+      display: data.display_name || finalCity
+    };
+  }
+
+  // Para formato "1.24 mi NE City": buscamos centro de la ciudad y calculamos distancia + rumbo
+  const placeCenterCache = new Map();
+  async function getPlaceCenter(city, state, country){
+    const key = `${city}|${state}|${country}`.toLowerCase();
+    if (placeCenterCache.has(key)) return placeCenterCache.get(key);
+
+    const q = [city, state, country].filter(Boolean).join(", ");
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1`;
+
+    const res = await fetch(url, { headers: { "Accept":"application/json" }});
+    if(!res.ok) return null;
+
+    const arr = await res.json();
+    if(!arr?.length) return null;
+
+    const center = L.latLng(Number(arr[0].lat), Number(arr[0].lon));
+    placeCenterCache.set(key, center);
+    return center;
+  }
+
+  async function prettyRelativeCity(pointLatLng){
+    const r = await nominatimReverse(pointLatLng.lat, pointLatLng.lng);
+    const cityName = r.city;
+    const center = await getPlaceCenter(cityName, r.state, r.country);
+
+    if(!center){
+      return { text: cityName, raw: r };
+    }
+
+    const mi = milesBetween(center, pointLatLng);
+    const brng = bearingDegrees(center, pointLatLng);
+    const dir = degToCompass8(brng);
+
+    // si está MUY cerca del centro, solo ciudad
+    if (mi < 0.15) return { text: cityName, raw: r };
+
+    return { text: `${mi.toFixed(2)} mi ${dir} ${cityName}`, raw: r };
   }
 
   // -----------------------------
-  // OSRM route
+  // OSRM multi route
   // -----------------------------
-  async function getRouteOSRM(a,b){
-    const url =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${a.lng},${a.lat};${b.lng},${b.lat}` +
-      `?overview=full&geometries=geojson&alternatives=false&steps=false`;
+  let routeLayer = null;
 
+  async function getRouteOSRM_Multi(latlngs){
+    const coords = latlngs.map(p => `${p.lng},${p.lat}`).join(";");
+    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&alternatives=false&steps=false`;
     const res = await fetch(url, { headers: { "Accept":"application/json" }});
     if(!res.ok) throw new Error("OSRM request failed");
     const data = await res.json();
@@ -376,209 +420,57 @@
     return data.routes[0];
   }
 
-  // -----------------------------
-  // Markers
-  // -----------------------------
-  function makeMarkerIcon(which){
-    const label = which;
-    const bg = which === "A" ? "rgba(34,197,94,.95)" : "rgba(96,165,250,.95)";
-    const iconHtml = `
-      <div style="
-        width:30px;height:30px;border-radius:12px;
-        background:${bg};
-        border:2px solid rgba(255,255,255,.85);
-        box-shadow:0 12px 24px rgba(0,0,0,.28);
-        display:flex;align-items:center;justify-content:center;
-        color:#0b1220;font-weight:900;">
-        ${label}
-      </div>
-    `;
-    return L.divIcon({ html: iconHtml, className: "", iconSize: [30,30], iconAnchor:[15,15] });
-  }
-
-  function ensureMarker(which, latlng){
-    const draggable = true;
-    const icon = makeMarkerIcon(which);
-
-    if(which === "A"){
-      if(markerA) map.removeLayer(markerA);
-      markerA = L.marker(latlng, { draggable, icon }).addTo(map);
-      markerA.on("dragend", async () => {
-        pointA = markerA.getLatLng();
-        await syncInputFromPoint("A", pointA);
-        await updateRouteIfReady();
-      });
-    } else {
-      if(markerB) map.removeLayer(markerB);
-      markerB = L.marker(latlng, { draggable, icon }).addTo(map);
-      markerB.on("dragend", async () => {
-        pointB = markerB.getLatLng();
-        await syncInputFromPoint("B", pointB);
-        await updateRouteIfReady();
-      });
-    }
-  }
-
-  // -----------------------------
-  // Route / Reset helpers
-  // -----------------------------
   function clearRouteOnly(){
-    if(routeLayer){ map.removeLayer(routeLayer); routeLayer = null; }
-    setMetrics("—", "Tiempo: —", soloMode ? "Solo punto" : "Ruta A→B");
+    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+    setMetrics("—","Tiempo: —", soloMode ? "Solo punto" : "Ruta con paradas");
   }
 
-  function resetAll(){
-    pickMode = null;
-    pointA = null; pointB = null;
-    if(markerA) map.removeLayer(markerA);
-    if(markerB) map.removeLayer(markerB);
-    markerA = null; markerB = null;
-
-    if(routeLayer) map.removeLayer(routeLayer);
-    routeLayer = null;
-
-    if(soloMarker) map.removeLayer(soloMarker);
-    soloMarker = null;
-
-    $("inputA").value = "";
-    $("inputB").value = "";
-    closeSuggest("A"); closeSuggest("B");
-
-    setSingleCity("—");
-    setMetrics("—", "Tiempo: —", soloMode ? "Solo punto" : "Ruta A→B");
-    setStatus("");
-  }
-
-  async function syncInputFromPoint(which, latlng){
-    try{
-      setStatus(`Buscando ciudad (${which})…`);
-      const r = await nominatimReverse(latlng.lat, latlng.lng);
-      if(which === "A") $("inputA").value = r.display;
-      else $("inputB").value = r.display;
-      setStatus("");
-    } catch(e){
-      setStatus(`No se pudo obtener ciudad (${which}).`);
-    }
-  }
-
-  async function updateRouteIfReady(){
-    if(soloMode) return; // en solo mode no calculamos ruta
-    if(!pointA || !pointB) return;
-    await computeRoute();
-  }
-
-  async function computeRoute(){
-    if(soloMode){
-      setStatus("Estás en modo Solo punto. Desactívalo para calcular ruta.");
+  async function computeMultiRoute(){
+    if (soloMode){
+      setStatus("Estás en Solo punto. Cambia a Ruta para usar paradas.");
       return;
     }
-    if(!pointA || !pointB){
-      setStatus("Selecciona Punto A y Punto B.");
+    const pts = stops.filter(s => s.latlng).map(s => s.latlng);
+    if (pts.length < 2){
+      setStatus("Pon al menos 2 puntos (A y B).");
       return;
     }
 
-    setStatus("Calculando ruta…");
+    setStatus("Calculando ruta con paradas…");
     clearRouteOnly();
 
     try{
-      const route = await getRouteOSRM(pointA, pointB);
-
+      const route = await getRouteOSRM_Multi(pts);
       const miles = milesFromMeters(route.distance);
       const timeTxt = formatTimeSeconds(route.duration);
 
       routeLayer = L.geoJSON(route.geometry, { style: { weight: 6 } }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
 
-      setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, "Ruta A→B");
+      setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, `${pts.length} puntos`);
       setSingleCity("—");
       setStatus("");
     } catch(e){
-      const meters = map.distance(pointA, pointB);
-      const miles = milesFromMeters(meters);
-      setMetrics(`${miles.toFixed(2)} mi (recta)`, `Tiempo: —`, "Ruta A→B");
-      setStatus("OSRM (demo) no disponible. Mostrando distancia en línea recta.");
+      setStatus("No se pudo calcular ruta (OSRM demo). Intenta con menos paradas o espera un momento.");
     }
   }
 
   function fitView(){
-    if(soloMode && soloMarker){
+    if (soloMode && soloMarker){
       map.setView(soloMarker.getLatLng(), Math.max(map.getZoom(), 14));
       return;
     }
-    if(routeLayer){
+    if (routeLayer){
       map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
       return;
     }
-    if(pointA && pointB){
-      map.fitBounds(L.latLngBounds([pointA, pointB]), { padding:[60,60] });
-      return;
-    }
-    if(pointA) map.setView(pointA, 12);
+    const pts = stops.filter(s => s.latlng).map(s => s.latlng);
+    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [60,60] });
   }
 
   // -----------------------------
-  // Solo punto logic (ciudad + millas desde tu ubicación)
+  // Autocomplete helpers
   // -----------------------------
-  function milesBetween(a, b){
-    const meters = map.distance(a, b);
-    return meters / 1609.344;
-  }
-
-  function getUserLocation(){
-    return new Promise((resolve, reject) => {
-      if(!navigator.geolocation) return reject(new Error("No geolocation"));
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(L.latLng(pos.coords.latitude, pos.coords.longitude)),
-        reject,
-        { enableHighAccuracy:true, timeout:8000 }
-      );
-    });
-  }
-
-  async function handleSoloPoint(latlng){
-    // limpia ruta y A/B para que no confunda
-    if(routeLayer){ map.removeLayer(routeLayer); routeLayer = null; }
-    if(markerA){ map.removeLayer(markerA); markerA=null; pointA=null; }
-    if(markerB){ map.removeLayer(markerB); markerB=null; pointB=null; }
-    $("inputA").value = "";
-    $("inputB").value = "";
-
-    // pone marker
-    if(soloMarker) map.removeLayer(soloMarker);
-    soloMarker = L.marker(latlng).addTo(map);
-
-    // ciudad
-    let cityText = "No encontrado";
-    try{
-      setStatus("Buscando ciudad…");
-      const r = await nominatimReverse(latlng.lat, latlng.lng);
-      cityText = `${r.city}${r.state ? ", " + r.state : ""}${r.country ? ", " + r.country : ""}`;
-    } catch(e){}
-
-    setSingleCity(cityText);
-
-    // millas desde tu ubicación
-    try{
-      if(!userLatLng){
-        setStatus("Obteniendo tu ubicación para calcular millas…");
-        userLatLng = await getUserLocation();
-      }
-      const miles = milesBetween(userLatLng, latlng);
-      setMetrics(`${miles.toFixed(2)} mi`, "Desde tu ubicación", "Solo punto");
-      setStatus("");
-    } catch(e){
-      setMetrics("—", "Activa ubicación para millas", "Solo punto");
-      setStatus("No hay permiso de ubicación. Actívalo para calcular millas.");
-    }
-
-    map.setView(latlng, Math.max(map.getZoom(), 14));
-  }
-
-  // -----------------------------
-  // Suggestions UI
-  // -----------------------------
-  function openSuggest(which){ $(which==="A" ? "suggestA" : "suggestB").classList.add("open"); }
-  function closeSuggest(which){ $(which==="A" ? "suggestA" : "suggestB").classList.remove("open"); }
-
   function escapeHtml(str){
     return (str||"")
       .replaceAll("&","&amp;")
@@ -587,12 +479,105 @@
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
   }
+  function debounce(fn, ms){
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+  function closeSuggestEl(el){ el.classList.remove("open"); }
+  function openSuggestEl(el){ el.classList.add("open"); }
 
-  function renderSuggest(which, results){
-    const box = $(which==="A" ? "suggestA" : "suggestB");
-    if(!results?.length){
+  // -----------------------------
+  // Multi-stops state
+  // -----------------------------
+  const stops = []; // { id, label, latlng, marker, inputEl, suggestEl }
+  let activePickStopId = null;
+
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const stopsEl = $("stops");
+
+  function makeId(){ return Math.random().toString(16).slice(2); }
+  function stopLabel(index){
+    if (index < letters.length) return letters[index];
+    const base = letters[index % letters.length];
+    const n = Math.floor(index / letters.length);
+    return `${base}${n}`;
+  }
+
+  function renderStops(){
+    stopsEl.innerHTML = "";
+
+    stops.forEach((s, idx) => {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const dot = document.createElement("div");
+      dot.className = "dot";
+      dot.style.background = idx === 0 ? "#34d399" : "#60a5fa";
+
+      const field = document.createElement("div");
+      field.className = "field";
+
+      const input = document.createElement("input");
+      input.placeholder = `Punto ${s.label} (dirección o ciudad)`;
+      input.autocomplete = "off";
+
+      const suggest = document.createElement("div");
+      suggest.className = "suggest";
+
+      field.appendChild(input);
+      field.appendChild(suggest);
+
+      const pickBtn = document.createElement("button");
+      pickBtn.className = "smallBtn";
+      pickBtn.textContent = s.label;
+      pickBtn.title = `Elegir ${s.label} en el mapa`;
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "smallBtn";
+      delBtn.textContent = "✕";
+      delBtn.title = "Quitar parada";
+
+      row.appendChild(dot);
+      row.appendChild(field);
+      row.appendChild(pickBtn);
+      row.appendChild(delBtn);
+
+      stopsEl.appendChild(row);
+
+      s.inputEl = input;
+      s.suggestEl = suggest;
+
+      const onType = debounce(async () => {
+        const q = input.value.trim();
+        if (q.length < 3) { closeSuggestEl(suggest); return; }
+        try{
+          const results = await nominatimSearch(q);
+          renderSuggestForStop(s, results);
+        } catch(e){
+          setStatus("Error buscando lugar.");
+        }
+      }, 250);
+
+      input.addEventListener("input", onType);
+
+      pickBtn.addEventListener("click", () => {
+        if (soloMode){ setStatus("Estás en Solo punto. Cambia a Ruta para usar paradas."); return; }
+        activePickStopId = s.id;
+        setStatus(`Selecciona punto ${s.label} en el mapa (click).`);
+      });
+
+      delBtn.addEventListener("click", () => removeStop(s.id));
+    });
+  }
+
+  function renderSuggestForStop(stop, results){
+    const box = stop.suggestEl;
+    if (!results?.length){
       box.innerHTML = `<div class="item"><div class="t">Sin resultados</div></div>`;
-      openSuggest(which);
+      openSuggestEl(box);
       return;
     }
 
@@ -611,86 +596,141 @@
       el.addEventListener("click", async () => {
         const idx = Number(el.getAttribute("data-idx"));
         const r = results[idx];
-        const lat = Number(r.lat), lon = Number(r.lon);
-        const latlng = L.latLng(lat, lon);
+        const latlng = L.latLng(Number(r.lat), Number(r.lon));
 
-        // Si estás en Solo punto, al seleccionar un resultado se trata como soloMarker
-        if(soloMode){
-          closeSuggest(which);
-          await handleSoloPoint(latlng);
-          return;
-        }
+        stop.inputEl.value = r.display_name || "";
+        closeSuggestEl(box);
 
-        if(which==="A"){
-          pointA = latlng;
-          ensureMarker("A", latlng);
-          $("inputA").value = r.display_name || "";
-          closeSuggest("A");
-        } else {
-          pointB = latlng;
-          ensureMarker("B", latlng);
-          $("inputB").value = r.display_name || "";
-          closeSuggest("B");
-        }
-
+        setStopLatLng(stop.id, latlng, true);
         map.setView(latlng, Math.max(map.getZoom(), 12));
-        await updateRouteIfReady();
       });
     });
 
-    openSuggest(which);
+    openSuggestEl(box);
   }
 
-  function debounce(fn, ms){
-    let t;
-    return (...args) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn(...args), ms);
-    };
+  function addStop(){
+    const id = makeId();
+    const label = stopLabel(stops.length);
+    stops.push({ id, label, latlng: null, marker: null, inputEl: null, suggestEl: null });
+    renderStops();
   }
 
-  const onTypeA = debounce(async () => {
-    const q = $("inputA").value.trim();
-    if(q.length < 3){ closeSuggest("A"); return; }
-    try{
-      const results = await nominatimSearch(q);
-      renderSuggest("A", results);
-    } catch(e){
-      setStatus("Error buscando A.");
+  function removeStop(id){
+    const i = stops.findIndex(s => s.id === id);
+    if (i === -1) return;
+
+    if (stops[i].marker) map.removeLayer(stops[i].marker);
+    stops.splice(i, 1);
+
+    // re-etiquetar
+    stops.forEach((s, idx) => s.label = stopLabel(idx));
+    renderStops();
+
+    if (stops.filter(s => s.latlng).length < 2) clearRouteOnly();
+  }
+
+  async function setStopLatLng(id, latlng, updateTextFromReverse=false){
+    const s = stops.find(x => x.id === id);
+    if (!s) return;
+
+    s.latlng = latlng;
+
+    if (s.marker) map.removeLayer(s.marker);
+    s.marker = L.marker(latlng, { draggable:true }).addTo(map);
+    s.marker.bindTooltip(s.label, { permanent:true, direction:"top", offset:[0,-10] });
+
+    s.marker.on("dragend", async () => {
+      s.latlng = s.marker.getLatLng();
+      try{
+        const pretty = await prettyRelativeCity(s.latlng);
+        s.inputEl.value = pretty.text;
+      } catch {}
+    });
+
+    if (updateTextFromReverse){
+      try{
+        const pretty = await prettyRelativeCity(latlng);
+        s.inputEl.value = pretty.text;
+      } catch {}
     }
-  }, 250);
+  }
 
-  const onTypeB = debounce(async () => {
-    const q = $("inputB").value.trim();
-    if(q.length < 3){ closeSuggest("B"); return; }
-    try{
-      const results = await nominatimSearch(q);
-      renderSuggest("B", results);
-    } catch(e){
-      setStatus("Error buscando B.");
-    }
-  }, 250);
-
-  $("inputA").addEventListener("input", onTypeA);
-  $("inputB").addEventListener("input", onTypeB);
-
+  // click afuera para cerrar sugerencias
   document.addEventListener("click", (e) => {
-    const aField = $("inputA").closest(".field");
-    const bField = $("inputB").closest(".field");
-    if(aField && !aField.contains(e.target)) closeSuggest("A");
-    if(bField && !bField.contains(e.target)) closeSuggest("B");
+    stops.forEach(s => {
+      if (!s.suggestEl || !s.inputEl) return;
+      const field = s.inputEl.closest(".field");
+      if (field && !field.contains(e.target)) closeSuggestEl(s.suggestEl);
+    });
   });
 
   // -----------------------------
-  // Mode buttons
+  // Solo punto (ciudad + millas desde tu ubicación)
+  // -----------------------------
+  let soloMode = false;
+  let soloMarker = null;
+  let userLatLng = null;
+
+  function getUserLocation(){
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) return reject(new Error("No geolocation"));
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve(L.latLng(pos.coords.latitude, pos.coords.longitude)),
+        reject,
+        { enableHighAccuracy:true, timeout:8000 }
+      );
+    });
+  }
+
+  async function handleSoloPoint(latlng){
+    // limpia markers de paradas (solo visual)
+    stops.forEach(s => {
+      if (s.marker) { map.removeLayer(s.marker); s.marker = null; s.latlng = null; }
+      if (s.inputEl) s.inputEl.value = "";
+    });
+    clearRouteOnly();
+
+    if (soloMarker) map.removeLayer(soloMarker);
+    soloMarker = L.marker(latlng).addTo(map);
+
+    // ciudad "bonita"
+    let prettyText = "Ciudad no encontrada";
+    try{
+      setStatus("Buscando ciudad…");
+      const pretty = await prettyRelativeCity(latlng);
+      prettyText = pretty.text;
+    } catch {}
+
+    setSingleCity(prettyText);
+
+    // millas desde ubicación
+    try{
+      if (!userLatLng){
+        setStatus("Obteniendo tu ubicación para calcular millas…");
+        userLatLng = await getUserLocation();
+      }
+      const miles = milesBetween(userLatLng, latlng);
+      setMetrics(`${miles.toFixed(2)} mi`, "Desde tu ubicación", "Solo punto");
+      setStatus("");
+    } catch(e){
+      setMetrics("—", "Activa ubicación para millas", "Solo punto");
+      setStatus("No hay permiso de ubicación. Actívalo para calcular millas.");
+    }
+
+    map.setView(latlng, Math.max(map.getZoom(), 14));
+  }
+
+  // -----------------------------
+  // Mode buttons + controls
   // -----------------------------
   function setModeRoute(){
     soloMode = false;
     $("modeRoute").classList.add("active");
     $("modeSolo").classList.remove("active");
     setSingleCity("—");
-    setMetrics("—","Tiempo: —","Ruta A→B");
-    setStatus("Modo Ruta: selecciona A y B (busca o click).");
+    setMetrics("—","Tiempo: —","Ruta con paradas");
+    setStatus("Modo Ruta: agrega paradas A, B, C... (busca o usa el mapa).");
   }
 
   function setModeSolo(){
@@ -698,134 +738,83 @@
     $("modeSolo").classList.add("active");
     $("modeRoute").classList.remove("active");
     clearRouteOnly();
-    // limpia A/B visualmente
-    if(markerA){ map.removeLayer(markerA); markerA=null; pointA=null; }
-    if(markerB){ map.removeLayer(markerB); markerB=null; pointB=null; }
-    $("inputA").value = "";
-    $("inputB").value = "";
     setSingleCity("—");
     setMetrics("—","Desde tu ubicación","Solo punto");
-    setStatus("Modo Solo punto: haz click en el mapa o busca y selecciona.");
+    setStatus("Modo Solo punto: haz click en el mapa.");
   }
 
   $("modeRoute").addEventListener("click", setModeRoute);
   $("modeSolo").addEventListener("click", setModeSolo);
 
-  // -----------------------------
-  // Pick buttons
-  // -----------------------------
-  $("pickA").addEventListener("click", () => {
-    if(soloMode){ setStatus("Estás en Solo punto. Cambia a Ruta para elegir A/B."); return; }
-    pickMode = "A";
-    setStatus("Selecciona Punto A en el mapa (click).");
+  $("btnAddStop").addEventListener("click", addStop);
+  $("btnRoute").addEventListener("click", computeMultiRoute);
+
+  $("btnReset").addEventListener("click", () => {
+    // limpia todo
+    if (soloMarker) { map.removeLayer(soloMarker); soloMarker = null; }
+    stops.forEach(s => { if (s.marker) map.removeLayer(s.marker); });
+    stops.length = 0;
+    clearRouteOnly();
+    setSingleCity("—");
+    setStatus("");
+    // vuelve a A,B
+    addStop(); addStop();
+    setModeRoute();
   });
 
-  $("pickB").addEventListener("click", () => {
-    if(soloMode){ setStatus("Estás en Solo punto. Cambia a Ruta para elegir A/B."); return; }
-    pickMode = "B";
-    setStatus("Selecciona Punto B en el mapa (click).");
-  });
-
-  // -----------------------------
-  // Map click
-  // -----------------------------
-  map.on("click", async (e) => {
-    if(soloMode){
-      await handleSoloPoint(e.latlng);
-      return;
-    }
-
-    // modo ruta
-    if(!pickMode){
-      if(!pointA) pickMode = "A";
-      else if(!pointB) pickMode = "B";
-      else pickMode = "B"; // reemplaza B
-    }
-
-    const which = pickMode;
-    pickMode = null;
-
-    if(which === "A"){
-      pointA = e.latlng;
-      ensureMarker("A", pointA);
-      await syncInputFromPoint("A", pointA);
-    } else {
-      pointB = e.latlng;
-      ensureMarker("B", pointB);
-      await syncInputFromPoint("B", pointB);
-    }
-
-    await updateRouteIfReady();
-  });
-
-  // -----------------------------
-  // Buttons / chips
-  // -----------------------------
-  $("btnReset").addEventListener("click", resetAll);
-  $("chipClearAll").addEventListener("click", resetAll);
+  $("chipClearAll").addEventListener("click", () => $("btnReset").click());
+  $("chipFit").addEventListener("click", fitView);
 
   $("chipClearRoute").addEventListener("click", () => {
-    if(soloMode){
-      if(soloMarker){ map.removeLayer(soloMarker); soloMarker=null; }
+    if (soloMode){
+      if (soloMarker) { map.removeLayer(soloMarker); soloMarker = null; }
       setSingleCity("—");
       setMetrics("—","Desde tu ubicación","Solo punto");
       setStatus("Marcador removido.");
-    } else {
-      clearRouteOnly();
-      setStatus("Ruta removida.");
+      return;
     }
+    clearRouteOnly();
+    setStatus("Ruta removida.");
   });
 
-  $("chipFit").addEventListener("click", fitView);
-
-  $("btnSwap").addEventListener("click", async () => {
-    if(soloMode){ setStatus("Solo punto no usa A/B."); return; }
-    const tmpP = pointA; pointA = pointB; pointB = tmpP;
-    const tmpT = $("inputA").value; $("inputA").value = $("inputB").value; $("inputB").value = tmpT;
-
-    if(pointA) ensureMarker("A", pointA); else if(markerA){ map.removeLayer(markerA); markerA=null; }
-    if(pointB) ensureMarker("B", pointB); else if(markerB){ map.removeLayer(markerB); markerB=null; }
-
-    await updateRouteIfReady();
-  });
-
-  $("btnRoute").addEventListener("click", computeRoute);
-
-  $("btnLocate").addEventListener("click", async () => {
-    if(!navigator.geolocation){
+  $("btnLocate").addEventListener("click", () => {
+    if (!navigator.geolocation){
       setStatus("Geolocalización no disponible.");
       return;
     }
     setStatus("Obteniendo tu ubicación…");
     navigator.geolocation.getCurrentPosition(async (pos) => {
-      const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-      userLatLng = latlng; // guarda para Solo punto
-      map.setView(latlng, 14);
-
-      if(soloMode){
-        // en solo mode, solo centra (no crea punto)
-        setStatus("Ubicación lista. Ahora selecciona un punto para ver millas.");
-        return;
-      }
-
-      // modo ruta: si no hay A, poner A en tu ubicación; si ya hay A, poner B
-      if(!pointA){
-        pointA = latlng;
-        ensureMarker("A", pointA);
-        await syncInputFromPoint("A", pointA);
-      } else {
-        pointB = latlng;
-        ensureMarker("B", pointB);
-        await syncInputFromPoint("B", pointB);
-      }
-      await updateRouteIfReady();
-      setStatus("");
+      userLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+      map.setView(userLatLng, 14);
+      setStatus(soloMode ? "Ubicación lista. Ahora selecciona un punto." : "Ubicación lista.");
     }, () => {
       setStatus("No se pudo obtener tu ubicación.");
     }, { enableHighAccuracy:true, timeout:8000 });
   });
 
-  // Init mode
+  // Click en mapa: asigna parada activa o modo solo
+  map.on("click", async (e) => {
+    if (soloMode){
+      await handleSoloPoint(e.latlng);
+      return;
+    }
+
+    let targetId = activePickStopId;
+    if (!targetId){
+      const empty = stops.find(s => !s.latlng);
+      targetId = empty ? empty.id : stops[stops.length - 1].id;
+    }
+    activePickStopId = null;
+
+    await setStopLatLng(targetId, e.latlng, true);
+    setStatus("");
+  });
+
+  // -----------------------------
+  // Init: create A and B
+  // -----------------------------
+  addStop();
+  addStop();
   setModeRoute();
 
   // -----------------------------

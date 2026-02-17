@@ -1,4 +1,4 @@
-const CACHE_NAME = "ruta-map-v5"; // cambia versión cuando actualices
+const CACHE_NAME = "ruta-map-v20"; // cambia versión cuando actualices
 
 const APP_SHELL = [
   "./",
@@ -45,5 +45,6 @@ self.addEventListener("fetch", event => {
     url.origin.includes("router.project-osrm.org") ||
     url.origin.includes("nominatim.openstreetmap.org") ||
     url.origin.includes("unpkg.com")
+
 
 

@@ -1,50 +1,85 @@
-const CACHE_NAME = "ruta-map-v20"; // cambia versión cuando actualices
+// service-worker.js
+const STATIC_CACHE = "ruta-static";
+const RUNTIME_CACHE = "ruta-runtime";
 
-const APP_SHELL = [
+// Archivos que sí vale la pena cachear "fijos"
+const STATIC_ASSETS = [
   "./",
-  "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
 
-// INSTALL
-self.addEventListener("install", event => {
+// 1) Instala: cachea lo básico (NO index.html)
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(APP_SHELL);
-    })
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// ACTIVATE
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
+// 2) Activa: toma control inmediato
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
 });
 
-// FETCH
-self.addEventListener("fetch", event => {
+// Helpers
+async function networkFirst(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  try {
+    const fresh = await fetch(request, { cache: "no-store" });
+    // guarda copia para offline
+    cache.put(request, fresh.clone());
+    return fresh;
+  } catch (err) {
+    const cached = await cache.match(request);
+    return cached || Response.error();
+  }
+}
 
-  const url = new URL(event.request.url);
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const fresh = await fetch(request);
+  const cache = await caches.open(RUNTIME_CACHE);
+  cache.put(request, fresh.clone());
+  return fresh;
+}
 
-  // 🚫 NO cachear APIs externas ni tiles
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Solo maneja GET
+  if (req.method !== "GET") return;
+
+  // No cachear APIs / tiles / CDNs
   if (
     url.origin.includes("openstreetmap.org") ||
     url.origin.includes("router.project-osrm.org") ||
     url.origin.includes("nominatim.openstreetmap.org") ||
     url.origin.includes("unpkg.com")
+  ) {
+    return; // deja que vaya directo a la red
+  }
 
+  // ✅ CLAVE: index.html SIEMPRE network-first (se actualiza solo)
+  const isHTML =
+    req.mode === "navigate" ||
+    (url.pathname.endsWith("/index.html")) ||
+    (req.headers.get("accept") || "").includes("text/html");
 
+  if (isHTML) {
+    event.respondWith(networkFirst(req));
+    return;
+  }
 
+  // Manifest e íconos: cache-first
+  if (url.pathname.endsWith("manifest.json") || url.pathname.includes("/icons/")) {
+    event.respondWith(cacheFirst(req));
+    return;
+  }
+
+  // Por defecto: cache-first para archivos propios
+  event.respondWith(cacheFirst(req));
+});

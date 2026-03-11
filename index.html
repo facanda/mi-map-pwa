@@ -71,6 +71,10 @@
       backdrop-filter:blur(14px);
     }
 
+    #topCard{
+      overflow:visible !important;
+    }
+
     .bar{
       padding:12px 14px;
       display:flex;
@@ -127,6 +131,8 @@
       gap:8px;
       align-items:center;
       flex-shrink:0;
+      position:relative;
+      overflow:visible;
     }
 
     .iconBtn{
@@ -148,6 +154,42 @@
     .iconBtn:hover{
       transform:translateY(-1px);
       background:rgba(255,255,255,.1);
+    }
+
+    .menu-dropdown{
+      position:absolute;
+      top:50px;
+      right:0;
+      min-width:250px;
+      background:rgba(10,18,34,.98);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:8px;
+      display:grid;
+      gap:6px;
+      z-index:20000;
+    }
+
+    .menu-item{
+      width:100%;
+      text-align:left;
+      border:none;
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:14px;
+    }
+
+    .menu-item:hover{
+      background:rgba(255,255,255,.12);
+    }
+
+    .menu-item.active{
+      border:1px solid rgba(34,197,94,.55);
+      background:linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.08));
     }
 
     .search{
@@ -311,12 +353,6 @@
       background:rgba(255,255,255,.1);
     }
 
-    .chip.active{
-      border-color:rgba(34,197,94,.55);
-      box-shadow:0 0 0 2px rgba(34,197,94,.18) inset;
-      background:linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.08));
-    }
-
     .chip.danger{
       border-color:rgba(239,68,68,.35);
       background:linear-gradient(135deg, rgba(239,68,68,.12), rgba(239,68,68,.04));
@@ -414,37 +450,11 @@
       display:none !important;
     }
 
-    .map-fab{
-      position:absolute;
-      right:16px;
-      bottom:110px;
-      z-index:10000;
-      width:54px;
-      height:54px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(10,18,34,.92);
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      font-size:22px;
-      box-shadow:0 14px 28px rgba(0,0,0,.35);
-      backdrop-filter:blur(10px);
-      transition:.18s ease;
-    }
-
-    .map-fab:hover{
-      transform:translateY(-1px) scale(1.02);
-      background:rgba(18,30,52,.96);
-    }
-
     @media (max-width:520px){
       .brand p{ display:none; }
       .row{ grid-template-columns:14px 1fr 42px 46px; }
       .summary-grid{ grid-template-columns:1fr 1fr; }
-      .map-fab{ bottom:100px; }
+      .menu-dropdown{ min-width:220px; }
     }
 
     @media (max-width:420px){
@@ -455,8 +465,6 @@
 <body>
 
 <div id="map"></div>
-
-<button class="map-fab" id="btnMapFocus" title="Ocultar o mostrar todo">⛶</button>
 
 <div class="top">
   <div class="card" id="topCard">
@@ -470,25 +478,26 @@
         </div>
         <div style="min-width:0">
           <h1>Ruta Pro Multi</h1>
-          <p>🟢 Point A automático · 🎯 movible · 🗺️ más mapa visible</p>
+          <p>🟢 Point A automático · 🎯 movible · 📱 menú limpio para móvil</p>
         </div>
       </div>
 
       <div class="btnRow">
-        <button class="iconBtn" id="btnToggleTop" title="Ocultar panel superior">▾</button>
-        <button class="iconBtn" id="btnToggleBottom" title="Ocultar panel inferior">▿</button>
-        <button class="iconBtn" id="btnToggleAll" title="Ocultar todo">⛶</button>
-        <button class="iconBtn" id="btnLocate" title="Mi ubicación">📍</button>
-        <button class="iconBtn" id="btnReset" title="Reset">⟲</button>
+        <button class="iconBtn" id="btnMenu" title="Menú">☰</button>
+
+        <div class="menu-dropdown hidden-panel" id="menuDropdown">
+          <button class="menu-item" id="modeRoute">🧭 Ruta con paradas</button>
+          <button class="menu-item" id="modeSolo">📌 Solo punto</button>
+          <button class="menu-item" id="menuToggleTop">Mostrar / ocultar panel superior</button>
+          <button class="menu-item" id="menuToggleBottom">Mostrar / ocultar resumen</button>
+          <button class="menu-item" id="menuToggleAll">Mostrar / ocultar todo</button>
+          <button class="menu-item" id="btnLocate">📍 Mi ubicación</button>
+          <button class="menu-item" id="btnReset">⟲ Reset</button>
+        </div>
       </div>
     </div>
 
-    <div class="search" id="searchPanel">
-      <div class="chips">
-        <button class="chip active" id="modeRoute">🧭 Ruta con paradas</button>
-        <button class="chip" id="modeSolo">📌 Solo punto</button>
-      </div>
-
+    <div class="search hidden-panel" id="searchPanel">
       <div id="stops"></div>
 
       <div class="chips" style="justify-content:space-between;">
@@ -668,7 +677,7 @@
   let userLatLng = null;
   let autoPointAReady = false;
 
-  let topHidden = false;
+  let topHidden = true;
   let bottomHidden = false;
   let allHidden = false;
 
@@ -1088,48 +1097,65 @@
     map.setView(latlng, Math.max(map.getZoom(), 14));
   }
 
+  function updateModeButtons(){
+    $("modeRoute").classList.toggle("active", !soloMode);
+    $("modeSolo").classList.toggle("active", soloMode);
+  }
+
   function setModeRoute(){
     soloMode = false;
-    $("modeRoute").classList.add("active");
-    $("modeSolo").classList.remove("active");
+    updateModeButtons();
     setSingleCity("—");
     setMetrics("—","Tiempo: —","Ruta con paradas");
     setSummaryMode("Ruta con paradas");
     setSummaryPoints(stops.filter(s => s.latlng).length);
-    setStatus("Modo Ruta: Point A es automático. Puedes moverlo y luego agregar B, C, D...");
+    setStatus("Modo Ruta: Point A es automático. Usa el menú ☰ para mostrar el panel superior.");
+    closeMenu();
   }
 
   function setModeSolo(){
     soloMode = true;
-    $("modeSolo").classList.add("active");
-    $("modeRoute").classList.remove("active");
+    updateModeButtons();
     clearRouteOnly();
     setSingleCity("—");
     setMetrics("—","Desde tu ubicación","Solo punto");
     setSummaryMode("Solo punto");
     setSummaryPoints(soloMarker ? 1 : 0);
     setStatus("Modo Solo punto: haz click en el mapa.");
+    closeMenu();
   }
 
-  function updatePanelButtons(){
-    $("btnToggleTop").textContent = topHidden ? "▸" : "▾";
-    $("btnToggleBottom").textContent = bottomHidden ? "▵" : "▿";
-    $("btnToggleAll").textContent = allHidden ? "◫" : "⛶";
-    $("btnMapFocus").textContent = allHidden ? "🗂" : "⛶";
+  function updateMenuLabels(){
+    $("menuToggleTop").textContent = topHidden ? "Mostrar panel superior" : "Ocultar panel superior";
+    $("menuToggleBottom").textContent = bottomHidden ? "Mostrar resumen" : "Ocultar resumen";
+    $("menuToggleAll").textContent = allHidden ? "Mostrar todo" : "Ocultar todo";
+  }
+
+  function closeMenu(){
+    $("menuDropdown").classList.add("hidden-panel");
+  }
+
+  function toggleMenu(){
+    $("menuDropdown").classList.toggle("hidden-panel");
+    updateMenuLabels();
+    updateModeButtons();
+  }
+
+  function syncAllHidden(){
+    allHidden = topHidden && bottomHidden;
+    updateMenuLabels();
   }
 
   function toggleTopPanel(){
     topHidden = !topHidden;
-    $("topCard").classList.toggle("hidden-panel", topHidden);
-    allHidden = topHidden && bottomHidden;
-    updatePanelButtons();
+    $("searchPanel").classList.toggle("hidden-panel", topHidden);
+    syncAllHidden();
   }
 
   function toggleBottomPanel(){
     bottomHidden = !bottomHidden;
     $("bottomSheet").classList.toggle("hidden-panel", bottomHidden);
-    allHidden = topHidden && bottomHidden;
-    updatePanelButtons();
+    syncAllHidden();
   }
 
   function toggleAllPanels(){
@@ -1137,28 +1163,43 @@
     topHidden = allHidden;
     bottomHidden = allHidden;
 
-    $("topCard").classList.toggle("hidden-panel", topHidden);
+    $("searchPanel").classList.toggle("hidden-panel", topHidden);
     $("bottomSheet").classList.toggle("hidden-panel", bottomHidden);
 
-    updatePanelButtons();
+    updateMenuLabels();
   }
 
-  $("btnToggleTop").addEventListener("click", toggleTopPanel);
-  $("btnToggleBottom").addEventListener("click", toggleBottomPanel);
-  $("btnToggleAll").addEventListener("click", toggleAllPanels);
-  $("btnMapFocus").addEventListener("click", toggleAllPanels);
+  $("btnMenu").addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
 
   $("modeRoute").addEventListener("click", setModeRoute);
   $("modeSolo").addEventListener("click", setModeSolo);
+
+  $("menuToggleTop").addEventListener("click", () => {
+    toggleTopPanel();
+    closeMenu();
+  });
+
+  $("menuToggleBottom").addEventListener("click", () => {
+    toggleBottomPanel();
+    closeMenu();
+  });
+
+  $("menuToggleAll").addEventListener("click", () => {
+    toggleAllPanels();
+    closeMenu();
+  });
 
   $("btnAddStop").addEventListener("click", () => {
     addStop();
 
     if (topHidden) {
       topHidden = false;
-      $("topCard").classList.remove("hidden-panel");
+      $("searchPanel").classList.remove("hidden-panel");
       allHidden = false;
-      updatePanelButtons();
+      updateMenuLabels();
     }
   });
 
@@ -1184,6 +1225,7 @@
     addStop();
     setModeRoute();
     await ensureAutoPointA();
+    closeMenu();
   });
 
   $("chipClearAll").addEventListener("click", () => $("btnReset").click());
@@ -1210,6 +1252,7 @@
   $("btnLocate").addEventListener("click", async () => {
     if (!navigator.geolocation){
       setStatus("Geolocalización no disponible.");
+      closeMenu();
       return;
     }
 
@@ -1227,6 +1270,8 @@
       }
     } catch {
       setStatus("No se pudo obtener tu ubicación.");
+    } finally {
+      closeMenu();
     }
   });
 
@@ -1247,10 +1292,22 @@
     setStatus("");
   });
 
+  document.addEventListener("click", (e) => {
+    const menu = $("menuDropdown");
+    const btn = $("btnMenu");
+    if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+      closeMenu();
+    }
+  });
+
   addStop();
   addStop();
+
+  $("searchPanel").classList.add("hidden-panel");
+
   setModeRoute();
-  updatePanelButtons();
+  updateMenuLabels();
+  updateModeButtons();
 
   window.addEventListener("load", async () => {
     await ensureAutoPointA();

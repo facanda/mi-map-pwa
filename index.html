@@ -29,14 +29,6 @@
       --line-2:rgba(255,255,255,.08);
       --shadow:0 22px 44px rgba(0,0,0,.38);
       --radius:20px;
-      --green:#22c55e;
-      --green-2:#16a34a;
-      --blue:#38bdf8;
-      --blue-2:#0ea5e9;
-      --purple:#8b5cf6;
-      --amber:#f59e0b;
-      --red:#ef4444;
-      --pink:#ec4899;
     }
 
     *{ box-sizing:border-box; }
@@ -183,27 +175,33 @@
       height:12px;
       border-radius:999px;
       justify-self:center;
-      margin-top:16px;
+      margin-top:17px;
       box-shadow:0 0 0 4px rgba(255,255,255,.05), 0 0 14px rgba(255,255,255,.08);
     }
 
     .field{
       position:relative;
       display:grid;
-      gap:6px;
+      gap:0;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:0;
+      overflow:visible;
     }
 
     input{
       width:100%;
       height:46px;
       border-radius:15px;
-      border:1px solid var(--line);
+      border:1px solid transparent;
       outline:none;
       background:rgba(255,255,255,.06);
       color:var(--text);
       padding:0 14px;
       font-size:14px;
       transition:.18s ease;
+      margin-bottom:0;
     }
 
     input:focus{
@@ -214,6 +212,15 @@
 
     input::placeholder{
       color:rgba(234,242,255,.46);
+    }
+
+    .point-inline-info{
+      margin-top:-2px;
+      padding:0 14px 10px 14px;
+      font-size:12px;
+      color:#cbd5e1;
+      line-height:1.25;
+      min-height:20px;
     }
 
     .smallBtn{
@@ -312,34 +319,6 @@
     .chip.danger{
       border-color:rgba(239,68,68,.35);
       background:linear-gradient(135deg, rgba(239,68,68,.12), rgba(239,68,68,.04));
-    }
-
-    .badge-line{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      background:linear-gradient(135deg, rgba(30,41,59,.95), rgba(15,23,42,.98));
-      border:1px solid var(--line);
-      padding:8px 12px;
-      border-radius:13px;
-      font-size:12px;
-      color:#f8fbff;
-      line-height:1.25;
-      box-shadow:0 8px 18px rgba(0,0,0,.18);
-      max-width:100%;
-      word-break:break-word;
-    }
-
-    .badge-icon{
-      width:18px;
-      height:18px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:999px;
-      background:rgba(56,189,248,.18);
-      flex-shrink:0;
-      font-size:11px;
     }
 
     .sheet{
@@ -731,15 +710,6 @@
   function closeSuggestEl(el){ el.classList.remove("open"); }
   function openSuggestEl(el){ el.classList.add("open"); }
 
-  function makeBadgeText(text){
-    return `
-      <div class="badge-line">
-        <span class="badge-icon">📍</span>
-        <span>${escapeHtml(text || "—")}</span>
-      </div>
-    `;
-  }
-
   const stops = [];
   let activePickStopId = null;
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -776,12 +746,12 @@
       suggest.className = "suggest";
 
       const info = document.createElement("div");
-      info.className = "point-info";
-      info.innerHTML = s.prettyText ? makeBadgeText(s.prettyText) : "";
+      info.className = "point-inline-info";
+      info.innerHTML = s.prettyText ? escapeHtml(s.prettyText) : "";
 
       field.appendChild(input);
-      field.appendChild(suggest);
       field.appendChild(info);
+      field.appendChild(suggest);
 
       const pickBtn = document.createElement("button");
       pickBtn.className = "smallBtn";
@@ -930,13 +900,13 @@
       const pretty = await prettyRelativeCity(latlng);
       s.prettyText = pretty.text;
 
-      if (s.infoEl) s.infoEl.innerHTML = makeBadgeText(pretty.text);
+      if (s.infoEl) s.infoEl.innerHTML = escapeHtml(pretty.text);
       if (updateTextFromReverse && s.inputEl) s.inputEl.value = pretty.text;
 
       s.marker.bindPopup(`
         <div style="min-width:180px;">
           <div style="font-weight:800; margin-bottom:8px;">Punto ${escapeHtml(s.label)}</div>
-          ${makeBadgeText(pretty.text)}
+          <div style="font-size:13px; line-height:1.35;">${escapeHtml(pretty.text)}</div>
         </div>
       `);
     } catch {
@@ -951,12 +921,12 @@
         s.prettyText = pretty.text;
 
         if (s.inputEl) s.inputEl.value = pretty.text;
-        if (s.infoEl) s.infoEl.innerHTML = makeBadgeText(pretty.text);
+        if (s.infoEl) s.infoEl.innerHTML = escapeHtml(pretty.text);
 
         s.marker.bindPopup(`
           <div style="min-width:180px;">
             <div style="font-weight:800; margin-bottom:8px;">Punto ${escapeHtml(s.label)}</div>
-            ${makeBadgeText(pretty.text)}
+            <div style="font-size:13px; line-height:1.35;">${escapeHtml(pretty.text)}</div>
           </div>
         `);
       } catch {}
@@ -1034,7 +1004,7 @@
       soloMarker.bindPopup(`
         <div style="min-width:180px;">
           <div style="font-weight:800; margin-bottom:8px;">Solo punto</div>
-          ${makeBadgeText(prettyText)}
+          <div style="font-size:13px; line-height:1.35;">${escapeHtml(prettyText)}</div>
         </div>
       `);
 

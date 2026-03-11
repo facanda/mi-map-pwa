@@ -21,8 +21,6 @@
       --bg:#07111f;
       --panel:rgba(10,18,34,.88);
       --panel-2:rgba(15,23,42,.95);
-      --card:rgba(255,255,255,.06);
-      --card-2:rgba(255,255,255,.08);
       --text:#eaf2ff;
       --muted:#9fb0cc;
       --line:rgba(255,255,255,.12);
@@ -156,6 +154,8 @@
       padding:12px;
       display:grid;
       gap:12px;
+      max-height:40vh;
+      overflow:auto;
     }
 
     #stops{
@@ -168,6 +168,10 @@
       grid-template-columns:20px 1fr 42px 46px;
       gap:10px;
       align-items:start;
+    }
+
+    .row.hidden-row{
+      display:none;
     }
 
     .dot{
@@ -268,10 +272,7 @@
     }
 
     .item:first-child{ border-top:0; }
-
-    .item:hover{
-      background:rgba(255,255,255,.06);
-    }
+    .item:hover{ background:rgba(255,255,255,.06); }
 
     .item .t{
       font-size:13px;
@@ -319,6 +320,12 @@
     .chip.danger{
       border-color:rgba(239,68,68,.35);
       background:linear-gradient(135deg, rgba(239,68,68,.12), rgba(239,68,68,.04));
+    }
+
+    .mini-tip{
+      font-size:12px;
+      color:var(--muted);
+      padding:2px 2px 0 2px;
     }
 
     .sheet{
@@ -403,10 +410,41 @@
       border:1px solid rgba(255,255,255,.12) !important;
     }
 
+    .hidden-panel{
+      display:none !important;
+    }
+
+    .map-fab{
+      position:absolute;
+      right:16px;
+      bottom:110px;
+      z-index:10000;
+      width:54px;
+      height:54px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(10,18,34,.92);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      font-size:22px;
+      box-shadow:0 14px 28px rgba(0,0,0,.35);
+      backdrop-filter:blur(10px);
+      transition:.18s ease;
+    }
+
+    .map-fab:hover{
+      transform:translateY(-1px) scale(1.02);
+      background:rgba(18,30,52,.96);
+    }
+
     @media (max-width:520px){
       .brand p{ display:none; }
       .row{ grid-template-columns:14px 1fr 42px 46px; }
       .summary-grid{ grid-template-columns:1fr 1fr; }
+      .map-fab{ bottom:100px; }
     }
 
     @media (max-width:420px){
@@ -418,8 +456,10 @@
 
 <div id="map"></div>
 
+<button class="map-fab" id="btnMapFocus" title="Ocultar o mostrar todo">⛶</button>
+
 <div class="top">
-  <div class="card">
+  <div class="card" id="topCard">
     <div class="bar">
       <div class="brand">
         <div class="logo" aria-hidden="true">
@@ -430,17 +470,20 @@
         </div>
         <div style="min-width:0">
           <h1>Ruta Pro Multi</h1>
-          <p>🟢 Point A automático · 🎯 puntos movibles · ✨ diseño premium</p>
+          <p>🟢 Point A automático · 🎯 movible · 🗺️ más mapa visible</p>
         </div>
       </div>
 
       <div class="btnRow">
+        <button class="iconBtn" id="btnToggleTop" title="Ocultar panel superior">▾</button>
+        <button class="iconBtn" id="btnToggleBottom" title="Ocultar panel inferior">▿</button>
+        <button class="iconBtn" id="btnToggleAll" title="Ocultar todo">⛶</button>
         <button class="iconBtn" id="btnLocate" title="Mi ubicación">📍</button>
         <button class="iconBtn" id="btnReset" title="Reset">⟲</button>
       </div>
     </div>
 
-    <div class="search">
+    <div class="search" id="searchPanel">
       <div class="chips">
         <button class="chip active" id="modeRoute">🧭 Ruta con paradas</button>
         <button class="chip" id="modeSolo">📌 Solo punto</button>
@@ -452,11 +495,15 @@
         <button class="chip" id="btnAddStop">➕ Agregar parada</button>
         <button class="chip" id="btnRoute">🚚 Calcular ruta</button>
       </div>
+
+      <div class="mini-tip">
+        Point A se pone automático. Puedes mover A y B arrastrando el marcador.
+      </div>
     </div>
   </div>
 </div>
 
-<div class="sheet">
+<div class="sheet" id="bottomSheet">
   <div class="card">
     <div class="resultTop">
       <div class="metrics">
@@ -621,6 +668,10 @@
   let userLatLng = null;
   let autoPointAReady = false;
 
+  let topHidden = false;
+  let bottomHidden = false;
+  let allHidden = false;
+
   async function getRouteOSRM_Multi(latlngs){
     const coords = latlngs.map(p => `${p.lng},${p.lat}`).join(";");
     const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&alternatives=false&steps=false`;
@@ -661,10 +712,7 @@
       const miles = milesFromMeters(route.distance);
       const timeTxt = formatTimeSeconds(route.duration);
 
-      routeLayer = L.geoJSON(route.geometry, {
-        style: { weight: 6 }
-      }).addTo(map);
-
+      routeLayer = L.geoJSON(route.geometry, { style: { weight: 6 } }).addTo(map);
       map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
 
       setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, `${pts.length} puntos`);
@@ -730,6 +778,10 @@
     stops.forEach((s, idx) => {
       const row = document.createElement("div");
       row.className = "row";
+
+      if (idx > 1 && !s.latlng) {
+        row.classList.add("hidden-row");
+      }
 
       const dot = document.createElement("div");
       dot.className = "dot";
@@ -1059,10 +1111,57 @@
     setStatus("Modo Solo punto: haz click en el mapa.");
   }
 
+  function updatePanelButtons(){
+    $("btnToggleTop").textContent = topHidden ? "▸" : "▾";
+    $("btnToggleBottom").textContent = bottomHidden ? "▵" : "▿";
+    $("btnToggleAll").textContent = allHidden ? "◫" : "⛶";
+    $("btnMapFocus").textContent = allHidden ? "🗂" : "⛶";
+  }
+
+  function toggleTopPanel(){
+    topHidden = !topHidden;
+    $("topCard").classList.toggle("hidden-panel", topHidden);
+    allHidden = topHidden && bottomHidden;
+    updatePanelButtons();
+  }
+
+  function toggleBottomPanel(){
+    bottomHidden = !bottomHidden;
+    $("bottomSheet").classList.toggle("hidden-panel", bottomHidden);
+    allHidden = topHidden && bottomHidden;
+    updatePanelButtons();
+  }
+
+  function toggleAllPanels(){
+    allHidden = !allHidden;
+    topHidden = allHidden;
+    bottomHidden = allHidden;
+
+    $("topCard").classList.toggle("hidden-panel", topHidden);
+    $("bottomSheet").classList.toggle("hidden-panel", bottomHidden);
+
+    updatePanelButtons();
+  }
+
+  $("btnToggleTop").addEventListener("click", toggleTopPanel);
+  $("btnToggleBottom").addEventListener("click", toggleBottomPanel);
+  $("btnToggleAll").addEventListener("click", toggleAllPanels);
+  $("btnMapFocus").addEventListener("click", toggleAllPanels);
+
   $("modeRoute").addEventListener("click", setModeRoute);
   $("modeSolo").addEventListener("click", setModeSolo);
 
-  $("btnAddStop").addEventListener("click", addStop);
+  $("btnAddStop").addEventListener("click", () => {
+    addStop();
+
+    if (topHidden) {
+      topHidden = false;
+      $("topCard").classList.remove("hidden-panel");
+      allHidden = false;
+      updatePanelButtons();
+    }
+  });
+
   $("btnRoute").addEventListener("click", computeMultiRoute);
 
   $("btnReset").addEventListener("click", async () => {
@@ -1151,6 +1250,7 @@
   addStop();
   addStop();
   setModeRoute();
+  updatePanelButtons();
 
   window.addEventListener("load", async () => {
     await ensureAutoPointA();

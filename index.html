@@ -678,8 +678,8 @@
   let autoPointAReady = false;
 
   let topHidden = true;
-  let bottomHidden = false;
-  let allHidden = false;
+  let bottomHidden = true;
+  let allHidden = true;
 
   async function getRouteOSRM_Multi(latlngs){
     const coords = latlngs.map(p => `${p.lng},${p.lat}`).join(";");
@@ -1109,7 +1109,7 @@
     setMetrics("—","Tiempo: —","Ruta con paradas");
     setSummaryMode("Ruta con paradas");
     setSummaryPoints(stops.filter(s => s.latlng).length);
-    setStatus("Modo Ruta: Point A es automático. Usa el menú ☰ para mostrar el panel superior.");
+    setStatus("Modo Ruta: Point A es automático. Usa el menú ☰ para mostrar paneles.");
     closeMenu();
   }
 
@@ -1304,10 +1304,11 @@
   addStop();
 
   $("searchPanel").classList.add("hidden-panel");
+$("bottomSheet").classList.add("hidden-panel");
 
-  setModeRoute();
-  updateMenuLabels();
-  updateModeButtons();
+setModeRoute();
+updateMenuLabels();
+updateModeButtons();
 
   window.addEventListener("load", async () => {
     await ensureAutoPointA();

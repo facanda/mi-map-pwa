@@ -2,186 +2,901 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ruta Pro Multi - Located Me</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Ruta Pro Multi</title>
 
-  <!-- Leaflet CSS -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
   <link
     rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
   />
 
   <style>
-    body {
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --card: #1f2937;
+      --muted: #94a3b8;
+      --text: #f8fafc;
+      --line: #334155;
+      --primary: #22c55e;
+      --primary-dark: #16a34a;
+      --accent: #38bdf8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
       font-family: Arial, Helvetica, sans-serif;
-      background: #111;
-      color: white;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      min-height: 100vh;
     }
 
     header {
-      background: #1e1e1e;
-      padding: 15px;
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      border-bottom: 2px solid #00bcd4;
-    }
-
-    #controls {
-      padding: 15px;
-      background: #1a1a1a;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, #0f172a, #111827);
+      border-bottom: 1px solid var(--line);
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
     }
 
-    input {
-      padding: 8px;
-      border-radius: 6px;
-      border: none;
-      width: 200px;
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 14px;
+    }
+
+    .toolbar-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr auto auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .stops-wrap {
+      padding: 14px;
+      background: #0f172a;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #e2e8f0;
+    }
+
+    .stops-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .stop-row {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .stop-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #0f172a;
+      border: 1px solid var(--line);
+      color: #cbd5e1;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    input, button, select {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input, select {
+      width: 100%;
+      background: #0b1220;
+      color: var(--text);
+    }
+
+    input::placeholder {
+      color: #64748b;
     }
 
     button {
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: none;
       cursor: pointer;
-      font-weight: bold;
-    }
-
-    .primary {
-      background: #00bcd4;
-      color: black;
-    }
-
-    .locate {
-      background: #4caf50;
       color: white;
+      background: #1e293b;
+      transition: 0.18s ease;
+      font-weight: 700;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary-dark);
+      color: #04130a;
+    }
+
+    .btn-primary:hover {
+      background: #22b357;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      border-color: #0ea5e9;
+      color: #06253a;
+    }
+
+    .btn-warning {
+      background: var(--warning);
+      border-color: #d97706;
+      color: #2b1602;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      border-color: #dc2626;
+    }
+
+    .btn-ghost {
+      background: #0b1220;
+      color: #e2e8f0;
+    }
+
+    .map-wrap {
+      position: relative;
+      min-height: 420px;
     }
 
     #map {
-      height: 75vh;
       width: 100%;
+      height: 100%;
+      min-height: 420px;
     }
 
-    #distance {
-      text-align: center;
-      padding: 10px;
-      background: #1e1e1e;
-      font-size: 18px;
-      border-top: 2px solid #00bcd4;
+    .floating-panel {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 1000;
+      width: min(360px, calc(100vw - 28px));
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .floating-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-weight: bold;
+    }
+
+    .metrics {
+      padding: 12px 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .metric-card {
+      background: #111827;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 19px;
+      font-weight: bold;
+    }
+
+    .saved-routes {
+      padding: 14px;
+      background: var(--panel);
+      border-top: 1px solid var(--line);
+    }
+
+    .saved-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .saved-item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .saved-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .saved-name {
+      font-weight: bold;
+    }
+
+    .saved-meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .saved-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    footer {
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      background: #0f172a;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #0b1220;
+      border: 1px solid var(--line);
+      color: #cbd5e1;
+    }
+
+    .install-hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 980px) {
+      .toolbar-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .floating-panel {
+        position: static;
+        width: auto;
+        margin: 12px;
+      }
+
+      .map-wrap {
+        display: grid;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .toolbar-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stop-row {
+        grid-template-columns: 28px 1fr;
+      }
+
+      .stop-row .btn-danger {
+        grid-column: 1 / -1;
+      }
     }
   </style>
 </head>
 <body>
+  <header>
+    <div class="brand">
+      <h1>🚛 Ruta Pro Multi</h1>
+      <p>GPS real · Rutas por carretera · Múltiples stops · Guardado local · PWA</p>
+    </div>
 
-<header>
-  🚛 Ruta Pro Multi - Located Me
-</header>
+    <div class="header-actions">
+      <span class="pill" id="statusPill">Ready</span>
+      <button id="installBtn" class="btn-accent install-hidden">📱 Install App</button>
+    </div>
+  </header>
 
-<div id="controls">
-  <input type="text" id="pickup" placeholder="Pickup City" />
-  <input type="text" id="delivery" placeholder="Delivery City" />
-  <button class="primary" onclick="calculateRoute()">Calculate Distance</button>
-  <button class="locate" onclick="locateMe()">📍 Located Me</button>
-</div>
+  <section class="toolbar">
+    <div class="toolbar-grid">
+      <input id="routeName" type="text" placeholder="Route name (example: Miami to Atlanta)" />
+      <input id="stopInput" type="text" placeholder="Add stop by city or address" />
+      <button id="addStopBtn" class="btn-ghost">➕ Add Stop</button>
+      <button id="locateBtn" class="btn-primary">📍 Use My GPS</button>
+      <button id="buildRouteBtn" class="btn-accent">🛣️ Build Route</button>
+    </div>
+  </section>
 
-<div id="map"></div>
+  <section class="stops-wrap">
+    <h2 class="section-title">Stops</h2>
+    <div id="stopsList" class="stops-list"></div>
 
-<div id="distance">
-  Distance: 0 miles
-</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <button id="saveRouteBtn" class="btn-warning">💾 Save Route</button>
+      <button id="clearStopsBtn" class="btn-danger">🗑️ Clear Stops</button>
+    </div>
+  </section>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <main class="map-wrap">
+    <div id="map"></div>
 
-<script>
-  const map = L.map("map").setView([39.8283, -98.5795], 4);
+    <aside class="floating-panel">
+      <div class="floating-header">Route Summary</div>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Road distance</div>
+          <div class="metric-value" id="distanceValue">0 mi</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Estimated drive time</div>
+          <div class="metric-value" id="durationValue">0h 0m</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Stops count</div>
+          <div class="metric-value" id="stopsCountValue">0</div>
+        </div>
+      </div>
+    </aside>
+  </main>
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors",
-  }).addTo(map);
+  <section class="saved-routes">
+    <h2 class="section-title">Saved Routes</h2>
+    <div id="savedRoutesList" class="saved-list"></div>
+  </section>
 
-  let pickupMarker, deliveryMarker, routeLine;
+  <footer>
+    Esta versión calcula rutas reales por carretera usando OSRM. Para rutas específicas de camión
+    con restricciones profesionales de trucking, luego podemos conectar una API truck-routing.
+  </footer>
 
-  function geocode(city) {
-    return fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${city}`
-    ).then((res) => res.json());
-  }
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
 
-  async function calculateRoute() {
-    const pickupCity = document.getElementById("pickup").value;
-    const deliveryCity = document.getElementById("delivery").value;
+  <script>
+    const map = L.map("map", { zoomControl: true }).setView([39.8283, -98.5795], 4);
 
-    if (!pickupCity || !deliveryCity) {
-      alert("Enter both cities");
-      return;
-    }
-
-    const pickupData = await geocode(pickupCity);
-    const deliveryData = await geocode(deliveryCity);
-
-    if (!pickupData.length || !deliveryData.length) {
-      alert("City not found");
-      return;
-    }
-
-    const pickupLatLng = [
-      parseFloat(pickupData[0].lat),
-      parseFloat(pickupData[0].lon),
-    ];
-
-    const deliveryLatLng = [
-      parseFloat(deliveryData[0].lat),
-      parseFloat(deliveryData[0].lon),
-    ];
-
-    if (pickupMarker) map.removeLayer(pickupMarker);
-    if (deliveryMarker) map.removeLayer(deliveryMarker);
-    if (routeLine) map.removeLayer(routeLine);
-
-    pickupMarker = L.marker(pickupLatLng)
-      .addTo(map)
-      .bindPopup("📦 Pickup")
-      .openPopup();
-
-    deliveryMarker = L.marker(deliveryLatLng)
-      .addTo(map)
-      .bindPopup("📍 Delivery");
-
-    routeLine = L.polyline([pickupLatLng, deliveryLatLng], {
-      color: "cyan",
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
-    map.fitBounds(routeLine.getBounds());
+    const statusPill = document.getElementById("statusPill");
+    const routeNameInput = document.getElementById("routeName");
+    const stopInput = document.getElementById("stopInput");
+    const addStopBtn = document.getElementById("addStopBtn");
+    const locateBtn = document.getElementById("locateBtn");
+    const buildRouteBtn = document.getElementById("buildRouteBtn");
+    const saveRouteBtn = document.getElementById("saveRouteBtn");
+    const clearStopsBtn = document.getElementById("clearStopsBtn");
+    const stopsList = document.getElementById("stopsList");
+    const savedRoutesList = document.getElementById("savedRoutesList");
+    const distanceValue = document.getElementById("distanceValue");
+    const durationValue = document.getElementById("durationValue");
+    const stopsCountValue = document.getElementById("stopsCountValue");
+    const installBtn = document.getElementById("installBtn");
 
-    const distance = map.distance(pickupLatLng, deliveryLatLng);
-    const miles = (distance / 1609.34).toFixed(2);
+    let deferredPrompt = null;
+    let currentLocationMarker = null;
+    let routeLine = null;
+    let markersLayer = L.layerGroup().addTo(map);
 
-    document.getElementById(
-      "distance"
-    ).innerText = `Distance: ${miles} miles`;
-  }
+    let stops = [
+      { label: "A", query: "", lat: null, lon: null, type: "manual" },
+      { label: "B", query: "", lat: null, lon: null, type: "manual" }
+    ];
 
-  function locateMe() {
-    map.locate({ setView: true, maxZoom: 13 });
+    function setStatus(text) {
+      statusPill.textContent = text;
+    }
 
-    map.on("locationfound", function (e) {
-      L.marker(e.latlng)
-        .addTo(map)
-        .bindPopup("📍 Located Me")
-        .openPopup();
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function labelForIndex(index) {
+      return index < 26 ? String.fromCharCode(65 + index) : `S${index + 1}`;
+    }
+
+    function renderStops() {
+      stopsList.innerHTML = "";
+
+      stops.forEach((stop, index) => {
+        stop.label = labelForIndex(index);
+
+        const row = document.createElement("div");
+        row.className = "stop-row";
+
+        row.innerHTML = `
+          <div class="stop-badge">${escapeHtml(stop.label)}</div>
+          <input
+            type="text"
+            placeholder="Stop ${escapeHtml(stop.label)}: city or address"
+            value="${escapeHtml(stop.query)}"
+            data-index="${index}"
+            class="stop-input"
+          />
+          ${
+            stops.length > 2
+              ? `<button class="btn-danger remove-stop-btn" data-index="${index}">Remove</button>`
+              : ``
+          }
+        `;
+
+        stopsList.appendChild(row);
+      });
+
+      document.querySelectorAll(".stop-input").forEach((input) => {
+        input.addEventListener("input", (e) => {
+          const i = Number(e.target.dataset.index);
+          stops[i].query = e.target.value;
+        });
+      });
+
+      document.querySelectorAll(".remove-stop-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const i = Number(e.target.dataset.index);
+          stops.splice(i, 1);
+          renderStops();
+          updateMetrics();
+        });
+      });
+
+      updateMetrics();
+    }
+
+    function updateMetrics(distanceMiles = 0, durationSeconds = 0) {
+      distanceValue.textContent = `${distanceMiles.toFixed(1)} mi`;
+
+      const totalMinutes = Math.round(durationSeconds / 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      durationValue.textContent = `${hours}h ${mins}m`;
+
+      stopsCountValue.textContent = String(stops.length);
+    }
+
+    async function geocodePlace(query) {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, {
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error("Geocoding failed");
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data) || !data.length) {
+        throw new Error(`Location not found: ${query}`);
+      }
+
+      return {
+        lat: Number(data[0].lat),
+        lon: Number(data[0].lon),
+        display: data[0].display_name || query
+      };
+    }
+
+    async function resolveStops() {
+      const resolved = [];
+
+      for (const stop of stops) {
+        if (stop.type === "gps" && stop.lat != null && stop.lon != null) {
+          resolved.push({
+            ...stop,
+            display: stop.query || "My GPS Location"
+          });
+          continue;
+        }
+
+        if (!stop.query.trim()) {
+          throw new Error("Please fill in all stop fields.");
+        }
+
+        const geo = await geocodePlace(stop.query.trim());
+        stop.lat = geo.lat;
+        stop.lon = geo.lon;
+        resolved.push({
+          ...stop,
+          display: geo.display
+        });
+      }
+
+      return resolved;
+    }
+
+    function clearMapRoute() {
+      if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+      }
+      markersLayer.clearLayers();
+    }
+
+    function addMarkersToMap(resolvedStops) {
+      markersLayer.clearLayers();
+
+      resolvedStops.forEach((stop, index) => {
+        const marker = L.marker([stop.lat, stop.lon]).bindPopup(
+          `<strong>${escapeHtml(labelForIndex(index))}</strong><br>${escapeHtml(stop.display || stop.query)}`
+        );
+        markersLayer.addLayer(marker);
+      });
+
+      if (currentLocationMarker) {
+        markersLayer.addLayer(currentLocationMarker);
+      }
+    }
+
+    async function buildRoadRoute() {
+      try {
+        setStatus("Building route...");
+        buildRouteBtn.disabled = true;
+
+        const resolvedStops = await resolveStops();
+
+        if (resolvedStops.length < 2) {
+          throw new Error("Add at least 2 stops.");
+        }
+
+        addMarkersToMap(resolvedStops);
+
+        const coordString = resolvedStops
+          .map((s) => `${s.lon},${s.lat}`)
+          .join(";");
+
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson&steps=false`;
+        const res = await fetch(osrmUrl);
+
+        if (!res.ok) {
+          throw new Error("Routing service failed.");
+        }
+
+        const data = await res.json();
+
+        if (!data.routes || !data.routes.length) {
+          throw new Error("No road route found.");
+        }
+
+        const route = data.routes[0];
+        const coords = route.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+
+        clearMapRoute();
+        addMarkersToMap(resolvedStops);
+
+        routeLine = L.polyline(coords, {
+          weight: 6,
+          opacity: 0.9
+        }).addTo(map);
+
+        map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+        const miles = route.distance / 1609.344;
+        const seconds = route.duration;
+
+        updateMetrics(miles, seconds);
+        setStatus("Route ready");
+      } catch (error) {
+        console.error(error);
+        setStatus("Error");
+        alert(error.message || "Could not build route.");
+      } finally {
+        buildRouteBtn.disabled = false;
+      }
+    }
+
+    function saveCurrentRoute() {
+      try {
+        const name = routeNameInput.value.trim() || `Route ${new Date().toLocaleString()}`;
+
+        const validStops = stops
+          .filter((s) => s.query.trim() || (s.type === "gps" && s.lat != null))
+          .map((s) => ({
+            label: s.label,
+            query: s.query,
+            lat: s.lat,
+            lon: s.lon,
+            type: s.type || "manual"
+          }));
+
+        if (validStops.length < 2) {
+          alert("Add at least 2 valid stops before saving.");
+          return;
+        }
+
+        const saved = JSON.parse(localStorage.getItem("rutaProMultiRoutes") || "[]");
+
+        const distanceText = distanceValue.textContent;
+        const durationText = durationValue.textContent;
+
+        saved.unshift({
+          id: Date.now(),
+          name,
+          stops: validStops,
+          distanceText,
+          durationText,
+          createdAt: new Date().toLocaleString()
+        });
+
+        localStorage.setItem("rutaProMultiRoutes", JSON.stringify(saved));
+        renderSavedRoutes();
+        setStatus("Route saved");
+      } catch (error) {
+        console.error(error);
+        alert("Could not save route.");
+      }
+    }
+
+    function loadSavedRoute(id) {
+      const saved = JSON.parse(localStorage.getItem("rutaProMultiRoutes") || "[]");
+      const route = saved.find((item) => item.id === id);
+      if (!route) return;
+
+      routeNameInput.value = route.name || "";
+      stops = route.stops.map((s, i) => ({
+        label: labelForIndex(i),
+        query: s.query || "",
+        lat: s.lat ?? null,
+        lon: s.lon ?? null,
+        type: s.type || "manual"
+      }));
+
+      renderStops();
+      buildRoadRoute();
+    }
+
+    function deleteSavedRoute(id) {
+      const saved = JSON.parse(localStorage.getItem("rutaProMultiRoutes") || "[]");
+      const updated = saved.filter((item) => item.id !== id);
+      localStorage.setItem("rutaProMultiRoutes", JSON.stringify(updated));
+      renderSavedRoutes();
+    }
+
+    function renderSavedRoutes() {
+      const saved = JSON.parse(localStorage.getItem("rutaProMultiRoutes") || "[]");
+
+      if (!saved.length) {
+        savedRoutesList.innerHTML = `<div class="saved-item"><div class="saved-meta">No saved routes yet.</div></div>`;
+        return;
+      }
+
+      savedRoutesList.innerHTML = saved
+        .map((item) => {
+          const stopNames = item.stops.map((s) => s.query || "My GPS Location").join(" → ");
+          return `
+            <div class="saved-item">
+              <div class="saved-top">
+                <div>
+                  <div class="saved-name">${escapeHtml(item.name)}</div>
+                  <div class="saved-meta">${escapeHtml(item.createdAt)} · ${escapeHtml(item.distanceText)} · ${escapeHtml(item.durationText)}</div>
+                </div>
+              </div>
+              <div class="saved-meta">${escapeHtml(stopNames)}</div>
+              <div class="saved-actions">
+                <button class="btn-accent" onclick="loadSavedRoute(${item.id})">Load</button>
+                <button class="btn-danger" onclick="deleteSavedRoute(${item.id})">Delete</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    async function useMyGpsAsFirstStop() {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported in this browser.");
+        return;
+      }
+
+      setStatus("Getting GPS...");
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          if (!stops.length) {
+            stops.push({
+              label: "A",
+              query: "My GPS Location",
+              lat,
+              lon,
+              type: "gps"
+            });
+          } else {
+            stops[0] = {
+              label: "A",
+              query: "My GPS Location",
+              lat,
+              lon,
+              type: "gps"
+            };
+          }
+
+          if (currentLocationMarker) {
+            markersLayer.removeLayer(currentLocationMarker);
+          }
+
+          currentLocationMarker = L.marker([lat, lon]).bindPopup("📍 My GPS Location");
+          markersLayer.addLayer(currentLocationMarker);
+          map.setView([lat, lon], 12);
+
+          renderStops();
+          setStatus("GPS ready");
+        },
+        (error) => {
+          console.error(error);
+          setStatus("GPS denied");
+          alert("Could not get your GPS location.");
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    function addStopFromToolbar() {
+      const value = stopInput.value.trim();
+      if (!value) {
+        alert("Write a city or address first.");
+        return;
+      }
+
+      stops.push({
+        label: labelForIndex(stops.length),
+        query: value,
+        lat: null,
+        lon: null,
+        type: "manual"
+      });
+
+      stopInput.value = "";
+      renderStops();
+      setStatus("Stop added");
+    }
+
+    function clearAllStops() {
+      stops = [
+        { label: "A", query: "", lat: null, lon: null, type: "manual" },
+        { label: "B", query: "", lat: null, lon: null, type: "manual" }
+      ];
+
+      routeNameInput.value = "";
+      stopInput.value = "";
+      clearMapRoute();
+      updateMetrics();
+      renderStops();
+      setStatus("Cleared");
+    }
+
+    addStopBtn.addEventListener("click", addStopFromToolbar);
+    locateBtn.addEventListener("click", useMyGpsAsFirstStop);
+    buildRouteBtn.addEventListener("click", buildRoadRoute);
+    saveRouteBtn.addEventListener("click", saveCurrentRoute);
+    clearStopsBtn.addEventListener("click", clearAllStops);
+
+    stopInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addStopFromToolbar();
     });
 
-    map.on("locationerror", function () {
-      alert("Location access denied");
-    });
-  }
-</script>
+    window.loadSavedRoute = loadSavedRoute;
+    window.deleteSavedRoute = deleteSavedRoute;
 
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove("install-hidden");
+    });
+
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBtn.classList.add("install-hidden");
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
+        try {
+          await navigator.serviceWorker.register("./service-worker.js");
+          console.log("Service Worker registered");
+        } catch (err) {
+          console.error("SW registration failed:", err);
+        }
+      });
+    }
+
+    renderStops();
+    renderSavedRoutes();
+    updateMetrics();
+  </script>
 </body>
 </html>

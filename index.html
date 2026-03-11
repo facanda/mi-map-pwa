@@ -6,11 +6,11 @@
   <title>Ruta Pro Multi</title>
 
   <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#0b1220">
+  <meta name="theme-color" content="#07111f">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RutaMap">
+  <meta name="apple-mobile-web-app-title" content="Ruta Pro Multi">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -18,31 +18,46 @@
 
   <style>
     :root{
-      --bg:#0b1220;
-      --card:rgba(17,24,39,.92);
-      --card-2:rgba(30,41,59,.92);
-      --text:#e5e7eb;
-      --muted:rgba(229,231,235,.75);
+      --bg:#07111f;
+      --panel:rgba(10,18,34,.88);
+      --panel-2:rgba(15,23,42,.95);
+      --card:rgba(255,255,255,.06);
+      --card-2:rgba(255,255,255,.08);
+      --text:#eaf2ff;
+      --muted:#9fb0cc;
       --line:rgba(255,255,255,.12);
       --line-2:rgba(255,255,255,.08);
-      --shadow:0 18px 40px rgba(0,0,0,.35);
-      --radius:18px;
+      --shadow:0 22px 44px rgba(0,0,0,.38);
+      --radius:20px;
+      --green:#22c55e;
+      --green-2:#16a34a;
+      --blue:#38bdf8;
+      --blue-2:#0ea5e9;
+      --purple:#8b5cf6;
+      --amber:#f59e0b;
+      --red:#ef4444;
+      --pink:#ec4899;
     }
 
     *{ box-sizing:border-box; }
 
-    body{
+    html, body{
       margin:0;
+      padding:0;
+      height:100%;
+    }
+
+    body{
       font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background:var(--bg);
+      background:radial-gradient(circle at top, #10203d 0%, #07111f 48%, #050c16 100%);
       color:var(--text);
-      height:100dvh;
       overflow:hidden;
     }
 
     #map{
       position:absolute;
       inset:0;
+      filter:saturate(1.05) contrast(1.02);
     }
 
     .top{
@@ -52,58 +67,64 @@
       right:calc(12px + env(safe-area-inset-right));
       z-index:9999;
       display:grid;
-      gap:10px;
+      gap:12px;
       pointer-events:none;
     }
 
     .card{
       pointer-events:auto;
-      background:var(--card);
+      background:var(--panel);
       border:1px solid var(--line);
       border-radius:var(--radius);
       box-shadow:var(--shadow);
       overflow:hidden;
-      backdrop-filter:blur(10px);
+      backdrop-filter:blur(14px);
     }
 
     .bar{
-      padding:10px 12px;
+      padding:12px 14px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:12px;
+      background:linear-gradient(135deg, rgba(56,189,248,.12), rgba(139,92,246,.08));
+      border-bottom:1px solid var(--line-2);
     }
 
     .brand{
       display:flex;
       align-items:center;
-      gap:10px;
+      gap:12px;
       min-width:0;
     }
 
     .logo{
-      width:36px;
-      height:36px;
-      border-radius:12px;
-      background:linear-gradient(135deg, rgba(34,197,94,.35), rgba(59,130,246,.25));
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      background:
+        radial-gradient(circle at top left, rgba(56,189,248,.45), transparent 45%),
+        linear-gradient(135deg, rgba(34,197,94,.28), rgba(139,92,246,.24));
+      border:1px solid rgba(255,255,255,.12);
       display:flex;
       align-items:center;
       justify-content:center;
-      border:1px solid rgba(255,255,255,.10);
       flex-shrink:0;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
     }
 
     .brand h1{
       margin:0;
-      font-size:15px;
+      font-size:16px;
       line-height:1.1;
+      letter-spacing:.2px;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
     .brand p{
-      margin:2px 0 0;
+      margin:4px 0 0;
       font-size:12px;
       color:var(--muted);
       white-space:nowrap;
@@ -115,26 +136,34 @@
       display:flex;
       gap:8px;
       align-items:center;
+      flex-shrink:0;
     }
 
     .iconBtn{
-      width:40px;
-      height:40px;
+      width:42px;
+      height:42px;
       border-radius:14px;
       border:1px solid var(--line);
-      background:rgba(255,255,255,.06);
+      background:rgba(255,255,255,.07);
       color:var(--text);
       display:flex;
       align-items:center;
       justify-content:center;
       cursor:pointer;
-      font-size:16px;
+      font-size:18px;
+      transition:.18s ease;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .iconBtn:hover{
+      transform:translateY(-1px);
+      background:rgba(255,255,255,.1);
     }
 
     .search{
-      padding:10px 12px 12px;
+      padding:12px;
       display:grid;
-      gap:10px;
+      gap:12px;
     }
 
     #stops{
@@ -144,19 +173,18 @@
 
     .row{
       display:grid;
-      grid-template-columns:18px 1fr 38px 44px;
+      grid-template-columns:20px 1fr 42px 46px;
       gap:10px;
       align-items:start;
     }
 
     .dot{
-      width:10px;
-      height:10px;
+      width:12px;
+      height:12px;
       border-radius:999px;
       justify-self:center;
-      margin-top:17px;
-      background:#93c5fd;
-      box-shadow:0 0 0 4px rgba(255,255,255,.05);
+      margin-top:16px;
+      box-shadow:0 0 0 4px rgba(255,255,255,.05), 0 0 14px rgba(255,255,255,.08);
     }
 
     .field{
@@ -167,23 +195,30 @@
 
     input{
       width:100%;
-      height:44px;
-      border-radius:14px;
+      height:46px;
+      border-radius:15px;
       border:1px solid var(--line);
       outline:none;
       background:rgba(255,255,255,.06);
       color:var(--text);
-      padding:0 12px;
+      padding:0 14px;
       font-size:14px;
+      transition:.18s ease;
+    }
+
+    input:focus{
+      border-color:rgba(56,189,248,.55);
+      box-shadow:0 0 0 3px rgba(56,189,248,.12);
+      background:rgba(255,255,255,.08);
     }
 
     input::placeholder{
-      color:rgba(229,231,235,.55);
+      color:rgba(234,242,255,.46);
     }
 
     .smallBtn{
-      height:44px;
-      border-radius:14px;
+      height:46px;
+      border-radius:15px;
       border:1px solid var(--line);
       background:rgba(255,255,255,.06);
       color:var(--text);
@@ -192,17 +227,23 @@
       align-items:center;
       justify-content:center;
       width:100%;
-      font-weight:700;
+      font-weight:800;
+      transition:.18s ease;
+    }
+
+    .smallBtn:hover{
+      transform:translateY(-1px);
+      background:rgba(255,255,255,.1);
     }
 
     .suggest{
       position:absolute;
-      top:48px;
+      top:50px;
       left:0;
       right:0;
-      background:rgba(17,24,39,.98);
+      background:rgba(10,18,34,.98);
       border:1px solid var(--line);
-      border-radius:14px;
+      border-radius:16px;
       overflow:hidden;
       box-shadow:var(--shadow);
       display:none;
@@ -212,18 +253,23 @@
     .suggest.open{ display:block; }
 
     .item{
-      padding:10px 12px;
+      padding:11px 13px;
       border-top:1px solid rgba(255,255,255,.08);
       cursor:pointer;
-      line-height:1.2;
+      line-height:1.25;
+      transition:.15s ease;
     }
 
     .item:first-child{ border-top:0; }
-    .item:hover{ background:rgba(255,255,255,.06); }
+
+    .item:hover{
+      background:rgba(255,255,255,.06);
+    }
 
     .item .t{
       font-size:13px;
       color:var(--text);
+      font-weight:600;
     }
 
     .item .s{
@@ -239,37 +285,61 @@
     }
 
     .chip{
-      padding:8px 10px;
+      padding:9px 12px;
       border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.06);
       font-size:12px;
       color:var(--text);
       cursor:pointer;
       user-select:none;
+      font-weight:700;
+      transition:.18s ease;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+    .chip:hover{
+      transform:translateY(-1px);
+      background:rgba(255,255,255,.1);
     }
 
     .chip.active{
       border-color:rgba(34,197,94,.55);
       box-shadow:0 0 0 2px rgba(34,197,94,.18) inset;
+      background:linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.08));
     }
 
     .chip.danger{
       border-color:rgba(239,68,68,.35);
+      background:linear-gradient(135deg, rgba(239,68,68,.12), rgba(239,68,68,.04));
     }
 
     .badge-line{
-      display:inline-block;
-      background:var(--card-2);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:linear-gradient(135deg, rgba(30,41,59,.95), rgba(15,23,42,.98));
       border:1px solid var(--line);
-      padding:7px 10px;
-      border-radius:12px;
+      padding:8px 12px;
+      border-radius:13px;
       font-size:12px;
-      color:#f8fafc;
+      color:#f8fbff;
       line-height:1.25;
-      box-shadow:0 6px 16px rgba(0,0,0,.18);
+      box-shadow:0 8px 18px rgba(0,0,0,.18);
       max-width:100%;
       word-break:break-word;
+    }
+
+    .badge-icon{
+      width:18px;
+      height:18px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      background:rgba(56,189,248,.18);
+      flex-shrink:0;
+      font-size:11px;
     }
 
     .sheet{
@@ -285,7 +355,8 @@
 
     .sheet .card{
       pointer-events:auto;
-      padding:12px;
+      padding:14px;
+      background:var(--panel-2);
     }
 
     .resultTop{
@@ -301,8 +372,8 @@
     }
 
     .big{
-      font-size:22px;
-      font-weight:800;
+      font-size:24px;
+      font-weight:900;
       letter-spacing:.2px;
     }
 
@@ -315,43 +386,47 @@
       display:grid;
       grid-template-columns:repeat(2, minmax(0,1fr));
       gap:10px;
-      margin-top:10px;
+      margin-top:12px;
     }
 
     .mini-card{
-      background:rgba(255,255,255,.05);
+      background:linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
       border:1px solid var(--line-2);
-      border-radius:14px;
-      padding:10px;
+      border-radius:16px;
+      padding:11px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
     }
 
     .mini-label{
       font-size:11px;
       color:var(--muted);
       margin-bottom:6px;
+      text-transform:uppercase;
+      letter-spacing:.4px;
     }
 
     .mini-value{
       font-size:15px;
-      font-weight:700;
+      font-weight:800;
       line-height:1.2;
     }
 
     .status{
-      margin-top:10px;
+      margin-top:12px;
       font-size:12px;
-      color:rgba(229,231,235,.7);
+      color:rgba(229,231,235,.78);
+      min-height:16px;
     }
 
     .leaflet-control-zoom a{
-      background:rgba(17,24,39,.92) !important;
+      background:rgba(10,18,34,.92) !important;
       color:#e5e7eb !important;
       border:1px solid rgba(255,255,255,.12) !important;
     }
 
     @media (max-width:520px){
       .brand p{ display:none; }
-      .row{ grid-template-columns:14px 1fr 38px 44px; }
+      .row{ grid-template-columns:14px 1fr 42px 46px; }
       .summary-grid{ grid-template-columns:1fr 1fr; }
     }
 
@@ -369,14 +444,14 @@
     <div class="bar">
       <div class="brand">
         <div class="logo" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M12 22s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11Z" stroke="white" stroke-width="2"/>
             <circle cx="12" cy="11" r="2.5" stroke="white" stroke-width="2"/>
           </svg>
         </div>
         <div style="min-width:0">
           <h1>Ruta Pro Multi</h1>
-          <p>Point A automático y movible · Paradas infinitas · Solo punto</p>
+          <p>🟢 Point A automático · 🎯 puntos movibles · ✨ diseño premium</p>
         </div>
       </div>
 
@@ -396,7 +471,7 @@
 
       <div class="chips" style="justify-content:space-between;">
         <button class="chip" id="btnAddStop">➕ Agregar parada</button>
-        <button class="chip" id="btnRoute">Calcular ruta</button>
+        <button class="chip" id="btnRoute">🚚 Calcular ruta</button>
       </div>
     </div>
   </div>
@@ -432,7 +507,7 @@
       </div>
     </div>
 
-    <div class="chips" style="margin-top:10px;">
+    <div class="chips" style="margin-top:12px;">
       <div class="chip" id="chipFit">🔎 Ver</div>
       <div class="chip" id="chipClearRoute">🧹 Quitar</div>
       <div class="chip danger" id="chipClearAll">🗑 Reset total</div>
@@ -607,7 +682,10 @@
       const miles = milesFromMeters(route.distance);
       const timeTxt = formatTimeSeconds(route.duration);
 
-      routeLayer = L.geoJSON(route.geometry, { style: { weight: 6 } }).addTo(map);
+      routeLayer = L.geoJSON(route.geometry, {
+        style: { weight: 6 }
+      }).addTo(map);
+
       map.fitBounds(routeLayer.getBounds(), { padding: [30,30] });
 
       setMetrics(`${miles.toFixed(2)} mi`, `Tiempo: ${timeTxt}`, `${pts.length} puntos`);
@@ -616,7 +694,7 @@
       setSummaryPoints(pts.length);
       setStatus("");
     } catch(e){
-      setStatus("No se pudo calcular ruta (OSRM demo). Intenta con menos paradas o espera un momento.");
+      setStatus("No se pudo calcular ruta. Intenta con menos paradas o espera un momento.");
     }
   }
 
@@ -652,7 +730,15 @@
 
   function closeSuggestEl(el){ el.classList.remove("open"); }
   function openSuggestEl(el){ el.classList.add("open"); }
-  function makeBadgeText(text){ return `<div class="badge-line">${escapeHtml(text || "—")}</div>`; }
+
+  function makeBadgeText(text){
+    return `
+      <div class="badge-line">
+        <span class="badge-icon">📍</span>
+        <span>${escapeHtml(text || "—")}</span>
+      </div>
+    `;
+  }
 
   const stops = [];
   let activePickStopId = null;
@@ -660,6 +746,7 @@
   const stopsEl = $("stops");
 
   function makeId(){ return Math.random().toString(16).slice(2); }
+
   function stopLabel(index){
     if (index < letters.length) return letters[index];
     const base = letters[index % letters.length];
@@ -676,7 +763,7 @@
 
       const dot = document.createElement("div");
       dot.className = "dot";
-      dot.style.background = idx === 0 ? "#34d399" : "#60a5fa";
+      dot.style.background = idx === 0 ? "#22c55e" : idx === 1 ? "#38bdf8" : "#8b5cf6";
 
       const field = document.createElement("div");
       field.className = "field";
@@ -753,7 +840,7 @@
           return;
         }
         activePickStopId = s.id;
-        setStatus(`Selecciona punto ${s.label} en el mapa (click).`);
+        setStatus(`Selecciona punto ${s.label} en el mapa.`);
       });
 
       delBtn.addEventListener("click", () => removeStop(s.id));
@@ -848,7 +935,7 @@
 
       s.marker.bindPopup(`
         <div style="min-width:180px;">
-          <div style="font-weight:700; margin-bottom:8px;">Punto ${escapeHtml(s.label)}</div>
+          <div style="font-weight:800; margin-bottom:8px;">Punto ${escapeHtml(s.label)}</div>
           ${makeBadgeText(pretty.text)}
         </div>
       `);
@@ -868,7 +955,7 @@
 
         s.marker.bindPopup(`
           <div style="min-width:180px;">
-            <div style="font-weight:700; margin-bottom:8px;">Punto ${escapeHtml(s.label)}</div>
+            <div style="font-weight:800; margin-bottom:8px;">Punto ${escapeHtml(s.label)}</div>
             ${makeBadgeText(pretty.text)}
           </div>
         `);
@@ -911,7 +998,7 @@
 
       autoPointAReady = true;
       setSummaryPoints(stops.filter(s => s.latlng).length);
-      setStatus("Point A listo. Puedes moverlo o seleccionar Point B en el mapa.");
+      setStatus("Point A listo. Puedes moverlo o seleccionar Point B.");
     } catch(e){
       setStatus("No se pudo obtener tu ubicación automática para Point A.");
     }
@@ -946,7 +1033,7 @@
 
       soloMarker.bindPopup(`
         <div style="min-width:180px;">
-          <div style="font-weight:700; margin-bottom:8px;">Solo punto</div>
+          <div style="font-weight:800; margin-bottom:8px;">Solo punto</div>
           ${makeBadgeText(prettyText)}
         </div>
       `);
